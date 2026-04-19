@@ -264,24 +264,33 @@ with active_tab[0]:
                     venue = e.get('venue', 'N/A') 
                     st.caption(f"📍 {venue} | ⏰ {e['start_time']}")
 
-                    if not is_cancelled:
-                        with st.expander("Update My RSVP"):
-                            # Unique key includes project and index to avoid collisions
-                            with st.form(f"rsvp_form_{i}_{view_proj}"):
-                                if st.form_submit_button("Confirm RSVP"):
-                                    if s is None:
-                                        st.error("Please select a status (Attending, Late, or Not Attending)!")
-                                    else:
-                                        e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
-                                r = st.text_input("Note/Reason")
-                                if st.form_submit_button("Confirm RSVP"):
-                                    e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
-                                    new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
-                                    st.session_state.data["rsvp"] = [x for x in st.session_state.data.get("rsvp", []) if not (x['event_id'] == e_id and x['name'] == c_name)]
-                                    st.session_state.data["rsvp"].append(new_rsvp)
-                                    save_data()
-                                    st.success("RSVP Saved!")
-                                    st.rerun()
+                    # --- TAB 0: DASHBOARD RSVP SECTION ---
+if not is_cancelled:
+    with st.expander("Update My RSVP"):
+        # 1. Ensure the form has a unique key
+        form_key = f"form_rsvp_{view_proj}_{i}"
+        
+        with st.form(key=form_key):
+            s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"], key=f"status_{form_key}")
+            r = st.text_input("Note/Reason", key=f"note_{form_key}")
+            
+            # 2. Add a unique KEY to the submit button itself
+            if st.form_submit_button("Confirm RSVP", key=f"btn_{form_key}"):
+                if s is None:
+                    st.error("Please select a status!")
+                else:
+                    # Create a truly unique ID for the event in the database
+                    e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+                    new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
+                    
+                    # Update RSVP list
+                    current_rsvps = st.session_state.data.get("rsvp", [])
+                    st.session_state.data["rsvp"] = [x for x in current_rsvps if not (x['event_id'] == e_id and x['name'] == c_name)]
+                    st.session_state.data["rsvp"].append(new_rsvp)
+                    
+                    save_data()
+                    st.success("RSVP Saved!")
+                    st.rerun()    
                     else:
                         st.info("RSVP disabled for cancelled event.")
 
