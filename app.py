@@ -169,6 +169,13 @@ if page == "Dashboard":
     # --- QUICK STATS ---
     col_a, col_b, col_c = st.columns(3)
     
+    # SAFE CALCULATION: Get contributions, or an empty dict if it doesn't exist
+    contribs = st.session_state.data.get('contributions', {})
+    user_total_minutes = contribs.get(c_name, 0)
+    total_hours = user_total_minutes // 60
+    
+    upcoming_events = len([e for e in st.session_state.data.get("events", []) if e.get("project") == view_proj])
+    
     # Calculate stats
     total_hours = st.session_state.data['contributions'].get(c_name, 0) // 60
     upcoming_events = len([e for e in st.session_state.data["events"] if e["project"] == view_proj])
