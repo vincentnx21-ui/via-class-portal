@@ -181,7 +181,7 @@ is_teach = (c_role == "Teacher")
 is_skit_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "SKIT")
 
 # Define tabs
-tabs_list = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
+tabs_list = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
 if is_chair:
     tabs_list.append("⚙️ Admin")
 
@@ -202,8 +202,21 @@ with active_tab[0]:
     
     col_a, col_b, col_c = st.columns(3)
     all_contribs = st.session_state.data.get('contributions', {})
-    user_minutes = all_contribs.get(c_name, 0)
     
+    # Column A: Hours (Students only) or Role (Teachers)
+    if c_role != "Teacher":
+        user_minutes = all_contribs.get(c_name, 0)
+        col_a.metric("Your VIA Hours", f"{user_minutes // 60}h {user_minutes % 60}m")
+    else:
+        col_a.metric("Role", "Faculty Observer")
+        
+    # Column B: Upcoming Events
+    all_events = st.session_state.data.get("events", [])
+    upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
+    col_b.metric("Upcoming Events", upcoming_events)
+    
+    # Column C: Project Status (Restoring the "On Track" delta)
+    col_c.metric(label="Project Status", value="Active", delta="On Track")
     all_events = st.session_state.data.get("events", [])
     upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
     
@@ -386,9 +399,28 @@ with active_tab[3]:
     else:
         st.info("No member data available.")
 
-# --- TAB 4: ADMIN ---
+# --- TAB 4: DIRECTORY ---
+with active_tab[4]:
+    st.title("📁 Class Directory")
+    st.info("List of all registered accounts in the VIA Class Portal.")
+    
+    all_accounts = st.session_state.data.get("accounts", [])
+    
+    if not all_accounts:
+        st.write("No accounts registered yet.")
+    else:
+        # Create a clean DataFrame for the class to view
+        df_dir = pd.DataFrame(all_accounts)
+        
+        # Rename columns for a professional look
+        df_dir.columns = ["Student Name", "Designated Role"]
+        
+        # Display as a table
+        st.table(df_dir)
+
+# --- TAB 5: ADMIN ---
 if is_chair:
-    with active_tab[4]:
+    with active_tab[5]:  # Changed index from 4 to 5
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         
