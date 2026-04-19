@@ -248,7 +248,6 @@ with active_tab[0]:
 
 # --- ATTENDANCE TAB ---
 with active_tab[1]:
-    elif page == "Attendance":
     st.title("✅ Attendance")
     evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
     if evs:
