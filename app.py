@@ -293,17 +293,54 @@ with active_tab[2]:
                             save_data()
                             st.rerun()
             
-            for c in log.get("comments", []): st.markdown(f"> **{c['teacher']}:** {c['text']}")
-            if is_teach:
-                with st.expander("📝 Add Comment"):
-                    with st.form(f"cmt_{log['log_id']}"):
-                        tc = st.text_area("Feedback")
-                        if st.form_submit_button("Post"):
-                            for l in st.session_state.data["logs"]:
-                                if l.get("log_id") == log["log_id"]:
-                                    l.setdefault("comments", []).append({"teacher": c_name, "text": tc, "time": str(datetime.now())})
-                            save_data(); st.rerun()
+for c in log.get("comments", []):
+    st.markdown(f"**{c['teacher']}**")
+    st.write(c["text"])
 
+    if is_teach:
+        c1, c2 = st.columns(2)
+
+        # 🗑️ DELETE COMMENT
+        if c1.button("🗑️ Delete", key=f"del_c_{c['comment_id']}"):
+            log["comments"] = [
+                x for x in log["comments"]
+                if x.get("comment_id") != c["comment_id"]
+            ]
+            save_data()
+            st.rerun()
+
+        # ✏️ EDIT COMMENT
+        with c2.expander("✏️ Edit"):
+            with st.form(f"edit_c_{c['comment_id']}"):
+                new_text = st.text_area("Edit comment", value=c["text"])
+
+                if st.form_submit_button("Save"):
+                    for x in log["comments"]:
+                        if x.get("comment_id") == c["comment_id"]:
+                            x["text"] = new_text
+
+                    save_data()
+                    st.rerun()
+
+# ➕ ADD COMMENT (teacher only, outside loop!)
+if is_teach:
+    with st.expander("📝 Add Comment"):
+        with st.form(f"cmt_{log['log_id']}"):
+            tc = st.text_area("Feedback")
+
+            if st.form_submit_button("Post"):
+                for l in st.session_state.data["logs"]:
+                    if l.get("log_id") == log["log_id"]:
+                        l.setdefault("comments", []).append({
+                            "comment_id": f"c_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                            "teacher": c_name,
+                            "text": tc,
+                            "time": str(datetime.now())
+                        })
+
+                save_data()
+                st.rerun()
+                
 # --- TAB 3: PROGRESS ---
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
