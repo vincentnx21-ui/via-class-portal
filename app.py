@@ -668,7 +668,7 @@ if st.session_state.u_role == "Chairman":
                 v_ev = st.text_input("Venue")
                 if st.form_submit_button("Add Event"):
                     st.session_state.data["events"].append({
-                        "project": ep, "type": type_ev, "date", "venue": str(d_ev), 
+                        "project": ep, "type": type_ev, "date": str(d_ev), "venue": v_ev, 
                         "start_time": str(s_ev), "status": "Active"
                     })
                     save_data(); st.success("Event Created"); st.rerun()
