@@ -379,6 +379,7 @@ with active_tab[2]:
                                     st.rerun()
 
 # --- TAB 3: PROGRESS ---
+# --- TAB 3: PROGRESS ---
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
     
@@ -396,171 +397,77 @@ with active_tab[3]:
         st.subheader("⚙️ Project Time Adjustments")
         col_add, col_sub = st.columns(2)
         
-        # --- ADD TIME BY PROJECT ---
         with col_add:
             with st.expander("➕ Add Project Bonus"):
                 with st.form("add_time_proj_form"):
-                    # Step 1: Pick Project
                     target_proj = st.selectbox("Select Project", ["SKIT", "BROCHURE"], key="add_proj_sel")
-                    
-                    # Step 2: Filter names based on Project
                     proj_names = [m['name'] for m in all_members if m['project'] == target_proj]
-                    
                     target_user = st.selectbox("Select Student", proj_names if proj_names else ["No members found"], key="add_user_sel")
                     bonus_mins = st.number_input("Minutes to Add", min_value=1, step=5)
                     reason_add = st.text_input("Reason")
                     
                     if st.form_submit_button("Apply Project Bonus"):
                         if target_user != "No members found" and reason_add:
-                            st.session_state.data["contributions"][target_user] = st.session_state.data["contributions"].get(target_user, 0) + bonus_mins
-                            # Log it with the specific project tag
+                            # UNIQUE KEY: Name + Project
+                            u_key = f"{target_user}_{target_proj}"
+                            st.session_state.data["contributions"][u_key] = st.session_state.data["contributions"].get(u_key, 0) + bonus_mins
+                            
                             st.session_state.data["logs"].append({
                                 "log_id": f"bonus_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                                "user": target_user,
-                                "date": str(date.today()),
-                                "minutes": bonus_mins,
-                                "task": f"BONUS ({target_proj}): {reason_add}",
-                                "project": target_proj, # Tagged to the project
-                                "comments": []
+                                "user": target_user, "date": str(date.today()), "minutes": bonus_mins,
+                                "task": f"BONUS ({target_proj}): {reason_add}", "project": target_proj, "comments": []
                             })
-                            save_data(); st.success(f"Added to {target_user} ({target_proj})"); st.rerun()
-                        else:
-                            st.error("Select a valid user and provide a reason.")
+                            save_data(); st.success("Added!"); st.rerun()
 
-        # --- DEDUCT TIME BY PROJECT ---
         with col_sub:
             with st.expander("➖ Deduct Project Time"):
                 with st.form("deduct_time_proj_form"):
                     sub_proj = st.selectbox("Select Project", ["SKIT", "BROCHURE"], key="sub_proj_sel")
                     sub_names = [m['name'] for m in all_members if m['project'] == sub_proj]
-                    
                     deduct_user = st.selectbox("Select Student", sub_names if sub_names else ["No members found"], key="sub_user_sel")
                     penalty_mins = st.number_input("Minutes to Deduct", min_value=1, step=5)
                     reason_sub = st.text_input("Reason (Required)")
                     
                     if st.form_submit_button("Apply Deduction"):
                         if deduct_user != "No members found" and reason_sub:
-                            curr = st.session_state.data["contributions"].get(deduct_user, 0)
-                            st.session_state.data["contributions"][deduct_user] = max(0, curr - penalty_mins)
+                            u_key = f"{deduct_user}_{sub_proj}"
+                            curr = st.session_state.data["contributions"].get(u_key, 0)
+                            st.session_state.data["contributions"][u_key] = max(0, curr - penalty_mins)
                             
                             st.session_state.data["logs"].append({
                                 "log_id": f"deduct_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                                "user": deduct_user,
-                                "date": str(date.today()),
-                                "minutes": -penalty_mins,
-                                "task": f"🛑 DEDUCTION ({sub_proj}): {reason_sub}",
-                                "project": sub_proj, # Tagged to the project
-                                "comments": []
+                                "user": deduct_user, "date": str(date.today()), "minutes": -penalty_mins,
+                                "task": f"🛑 DEDUCTION ({sub_proj}): {reason_sub}", "project": sub_proj, "comments": []
                             })
-                            save_data(); st.warning(f"Deducted from {deduct_user}"); st.rerun()
-                        else:
-                            st.error("Reason required.")
+                            save_data(); st.warning("Deducted!"); st.rerun()
 
     st.divider()
     
-    # 3. INDEPENDENT PROGRESS LISTS (Same as before, keeps them separate)
-    st.subheader("👥 Team Progress")
-    prog_skit, prog_broch = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
-    
-    with prog_skit:
-        skit_only = [m for m in all_members if m['project'] == "SKIT"]
-        for m in skit_only:
-            m_name, m_mins = m['name'], all_contribs.get(m['name'], 0)
-            c1, c2 = st.columns([1, 3])
-            c1.write(f"**{m_name}**")
-            c2.progress(min(1.0, m_mins/300), text=f"{m_mins//60}h {m_mins%60}m")
-
-    with prog_broch:
-        broch_only = [m for m in all_members if m['project'] == "BROCHURE"]
-        for m in broch_only:
-            m_name, m_mins = m['name'], all_contribs.get(m['name'], 0)
-            c1, c2 = st.columns([1, 3])
-            c1.write(f"**{m_name}**")
-            c2.progress(min(1.0, m_mins/300), text=f"{m_mins//60}h {m_mins%60}m")
-    # 3. INDEPENDENT PROGRESS LISTS
-    st.subheader("👥 Team Progress")
-    
-    prog_skit, prog_broch = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
-    
-    with prog_skit:
-        # Strictly filter for SKIT only
-        skit_only = [m for m in all_members if m['project'] == "SKIT"]
-        if not skit_only:
-            st.info("No members assigned to Skit.")
-        else:
-            for i, m in enumerate(skit_only):
-                m_name = m['name']
-                m_mins = all_contribs.get(m_name, 0)
-                # Goal: 5 hours (300 mins)
-                percent = min(1.0, m_mins / 300)
-                
-                # Using unique column keys to prevent overlap
-                c1, c2 = st.columns([1, 3])
-                c1.write(f"**{m_name}**")
-                c2.progress(percent, text=f"{m_mins // 60}h {m_mins % 60}m")
-
-    with prog_broch:
-        # Strictly filter for BROCHURE only
-        broch_only = [m for m in all_members if m['project'] == "BROCHURE"]
-        if not broch_only:
-            st.info("No members assigned to Brochure.")
-        else:
-            for i, m in enumerate(broch_only):
-                m_name = m['name']
-                m_mins = all_contribs.get(m_name, 0)
-                percent = min(1.0, m_mins / 300)
-                
-                # Using unique column keys to prevent overlap
-                c1, c2 = st.columns([1, 3])
-                c1.write(f"**{m_name}**")
-                c2.progress(percent, text=f"{m_mins // 60}h {m_mins % 60}m")
-                
-    # 3. GROUPED PROGRESS BARS
+    # 3. GROUPED PROGRESS BARS (Only one set of bars now)
     st.subheader("👥 Progress by Project Team")
-    
     if not all_members:
         st.info("Add members in Admin to see progress.")
     else:
-        # Create tabs for the two projects
-        prog_skit, prog_broch = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
+        p_skit, p_broch = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
         
-        # Helper function to render progress for a specific project
-        def render_project_progress(project_name):
-            project_members = [m for m in all_members if m['project'] == project_name]
-            if not project_members:
-                st.write(f"No members assigned to {project_name} yet.")
-            else:
-                for m in project_members:
-                    m_name = m['name']
-                    m_mins = all_contribs.get(m_name, 0)
-                    # Goal is 5 hours (300 mins)
-                    progress_val = min(1.0, m_mins / 300) 
-                    
-                    col_n, col_b = st.columns([1, 3])
-                    col_n.write(f"**{m_name}**")
-                    col_b.progress(progress_val, text=f"{m_mins // 60}h {m_mins % 60}m")
+        with p_skit:
+            skit_members = [m for m in all_members if m['project'] == "SKIT"]
+            for m in skit_members:
+                m_key = f"{m['name']}_SKIT"
+                m_mins = all_contribs.get(m_key, 0)
+                c1, c2 = st.columns([1, 3])
+                c1.write(f"**{m['name']}**")
+                c2.progress(min(1.0, m_mins/300), text=f"{m_mins//60}h {m_mins%60}m")
 
-        with prog_skit:
-            render_project_progress("SKIT")
-            
-        with prog_broch:
-            render_project_progress("BROCHURE")
-    # 3. VISUAL PROGRESS BAR
-    st.subheader("Individual Progress")
-    if not all_members:
-        st.info("Add members in Admin to see progress.")
-    else:
-        for m in all_members:
-            m_name = m['name']
-            m_mins = all_contribs.get(m_name, 0)
-            
-            # Formatting for display
-            progress_val = min(1.0, m_mins / 300) # Assuming 300 mins (5 hours) is the goal
-            
-            col_name, col_bar = st.columns([1, 3])
-            col_name.write(f"**{m_name}**")
-            col_bar.progress(progress_val, text=f"{m_mins // 60}h {m_mins % 60}m")
-
+        with p_broch:
+            broch_members = [m for m in all_members if m['project'] == "BROCHURE"]
+            for m in broch_members:
+                m_key = f"{m['name']}_BROCHURE"
+                m_mins = all_contribs.get(m_key, 0)
+                c1, c2 = st.columns([1, 3])
+                c1.write(f"**{m['name']}**")
+                c2.progress(min(1.0, m_mins/300), text=f"{m_mins//60}h {m_mins%60}m")    
+                
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
     st.title("📁 Official Class Directory")
@@ -651,8 +558,7 @@ with active_tab[4]:
             file_name=f"VIA_Directory_{date.today()}.csv",
             mime='text/csv',
         )
-        
-# --- TAB 5: ADMIN ---
+
 # --- TAB 5: ADMIN (Chairman Only) ---
 if is_chair:
     with active_tab[5]: 
