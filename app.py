@@ -284,17 +284,86 @@ with active_tab[1]:
 # --- TAB 2: ACTIVITY LOG ---
 with active_tab[2]:
     st.title("🕒 Activity Log")
-    with st.expander("➕ Log New Activity"):
-        with st.form(key=f"activity_log_form_{view_proj}"):
-            ld = st.date_input("Date", value=date.today())
-            lm = st.number_input("Minutes", min_value=5, step=5)
-            lt = st.text_input("Task Description")
-            lp = st.selectbox("Project", ["SKIT", "BROCHURE"])
-            if st.form_submit_button("Submit Log"):
-                st.session_state.data["logs"].append({"user": c_name, "date": str(ld), "minutes": lm, "task": lt, "project": lp})
-                # Update contributions
-                st.session_state.data["contributions"][c_name] = st.session_state.data["contributions"].get(c_name, 0) + lm
-                save_data(); st.success("Activity Logged!"); st.rerun()
+    
+    # 1. SUBMISSION FORM (Only for Members/Reps/Chair - Teachers usually don't log hours)
+    if c_role != "Teacher":
+        with st.expander("➕ Log New Activity"):
+            with st.form(key=f"activity_log_form_{view_proj}"):
+                ld = st.date_input("Date", value=date.today())
+                lm = st.number_input("Minutes", min_value=5, step=5)
+                lt = st.text_input("Task Description")
+                lp = st.selectbox("Project", ["SKIT", "BROCHURE"])
+                if st.form_submit_button("Submit Log"):
+                    new_log = {
+                        "log_id": f"log_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                        "user": c_name,
+                        "date": str(ld),
+                        "minutes": lm,
+                        "task": lt,
+                        "project": lp,
+                        "comments": []  # Initialize empty comments list
+                    }
+                    st.session_state.data["logs"].append(new_log)
+                    st.session_state.data["contributions"][c_name] = st.session_state.data["contributions"].get(c_name, 0) + lm
+                    save_data(); st.success("Activity Logged!"); st.rerun()
+
+    st.divider()
+    st.subheader("📜 Recent Activity & Teacher Feedback")
+
+    # 2. DISPLAY LOGS WITH COMMENT LOGIC
+    all_logs = st.session_state.data.get("logs", [])
+    # Filter logs for the current project
+    proj_logs = [l for l in all_logs if l.get("project") == view_proj]
+
+    if not proj_logs:
+        st.info("No activities logged for this project yet.")
+    else:
+        # Show logs in reverse order (newest first)
+        for i, log in enumerate(reversed(proj_logs)):
+            with st.container(border=True):
+                col_text, col_stats = st.columns([3, 1])
+                
+                with col_text:
+                    st.markdown(f"**{log['user']}** - {log['task']}")
+                    st.caption(f"📅 {log['date']}")
+                
+                with col_stats:
+                    st.info(f"{log['minutes']} mins")
+
+                # --- COMMENTS SECTION ---
+                comments = log.get("comments", [])
+                if comments:
+                    st.markdown("---")
+                    st.markdown("**💬 Teacher Comments:**")
+                    for c in comments:
+                        st.markdown(f"> **{c['teacher']}:** {c['text']}")
+
+                # --- TEACHER ONLY: COMMENT INPUT ---
+                if c_role == "Teacher":
+                    with st.expander("📝 Add Comment"):
+                        with st.form(key=f"comment_form_{i}"):
+                            t_comment = st.text_area("Feedback", placeholder="Enter your comments here...")
+                            if st.form_submit_button("Post Comment"):
+                                if t_comment:
+                                    # Create the comment object
+                                    new_comment = {
+                                        "teacher": c_name, # Records the teacher's name
+                                        "text": t_comment,
+                                        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+                                    }
+                                    
+                                    # Find the original log in the main database and append the comment
+                                    # (Since we are using reversed, we find by log_id or unique index)
+                                    for original_log in st.session_state.data["logs"]:
+                                        if original_log.get("log_id") == log.get("log_id"):
+                                            if "comments" not in original_log:
+                                                original_log["comments"] = []
+                                            original_log["comments"].append(new_comment)
+                                            break
+                                    
+                                    save_data()
+                                    st.success("Comment added!")
+                                    st.rerun()
 
 # --- TAB 3: PROGRESS ---
 with active_tab[3]:
