@@ -164,8 +164,20 @@ if not st.session_state.authenticated:
     st.stop()
 
 # --- 5. NAVIGATION (The Tab Menu) ---
-c_name, c_role = st.session_state.u_name, st.session_state.u_role
 
+# 1. First, define who the user is
+c_name = st.session_state.u_name
+c_role = st.session_state.u_role
+
+# 2. Define the list of tabs (The computer needs to know this first!)
+tabs_list = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
+if c_role == "Chairman":
+    tabs_list.append("⚙️ Admin")
+
+# 3. NOW create the tabs using that list
+active_tab = st.tabs(tabs_list)
+
+# --- SIDEBAR UI ---
 st.sidebar.markdown(f"### 👤 {c_name}")
 view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"])
 
@@ -173,15 +185,21 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
 
-# This creates the horizontal menu buttons at the top (No dots!)
-tabs_list = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
-if c_role == "Chairman":
-    tabs_list.append("⚙️ Admin")
+# --- 6. PAGE CONTENT ---
 
-# active_tab is now a list of "containers"
-active_tab = st.tabs(tabs_list)
+# Instead of: if page == "Dashboard":
+with active_tab[0]: 
+    st.title(f"🚀 {view_proj} Project Portal")
+    # ... (all your dashboard code goes here, indented)
 
-# --- 6. PAGE CONTENT (Wrapped in Tabs) ---
+# Instead of: elif page == "Attendance":
+with active_tab[1]:
+    st.title("📝 Attendance Tracker")
+    # ... (all your attendance code goes here, indented)
+
+# Instead of: elif page == "Activity Log":
+with active_tab[2]:
+    # (The Activity Log code I gave you earlier goes here)
 
 # --- DASHBOARD TAB ---
 with active_tab[0]:
