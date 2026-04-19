@@ -403,22 +403,29 @@ with active_tab[3]:
 with active_tab[4]:
     st.title("📁 Official Class Directory")
     
-    # 1. TOP LEVEL STATS (Using Average instead of Total)
+    # 1. TOP LEVEL STATS
     all_members = st.session_state.data.get("members", [])
     all_contribs = st.session_state.data.get("contributions", {})
     all_logs = st.session_state.data.get("logs", [])
     
     m_col1, m_col2, m_col3 = st.columns(3)
     
-    # Calculate Average Hours
+    # Calculate Average Time
     total_mins = sum(all_contribs.values())
     num_members = len(all_members)
-    avg_mins = total_mins / num_members if num_members > 0 else 0
-    avg_h = avg_mins / 60
     
+    if num_members > 0:
+        avg_mins_total = total_mins // num_members
+        avg_h = avg_mins_total // 60
+        avg_m = avg_mins_total % 60
+        avg_display = f"{avg_h}h {avg_m}m"
+    else:
+        avg_display = "0h 0m"
+
+    # Display Metrics
     m_col1.metric("Total Members", num_members)
-    m_col2.metric("Avg. Hours per Student", f"{avg_h:.1f}h") # Shows 1 decimal place (e.g., 5.5h)
-    m_col3.metric("Active Projects", "2")
+    m_col2.metric("Average Time", avg_display)
+    m_col3.metric("Active Projects", "2") 
     
     st.divider()
 
