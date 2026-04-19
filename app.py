@@ -453,16 +453,72 @@ if c_role == "Chairman":
     with active_tab[4]:
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
-        with t1:
-            with st.form("m_man"):
-                n = st.text_input("Name")
-                p = st.selectbox("Project", ["SKIT", "BROCHURE"])
-                r = st.checkbox("Representative")
-                s = st.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "N/A"]) if p=="SKIT" else "Designer"
-                if st.form_submit_button("Save Member"):
-                    st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != n]
-                    st.session_state.data["members"].append({"name": n, "project": p, "is_rep": r, "sub_role": s})
-                    save_data(); st.rerun()
+        # --- CONTRIBUTION TRACKER TAB ---
+with active_tab[3]:
+    st.title("⏳ Time Management")
+    
+    # 1. PERMISSIONS CHECK
+    # Ensure is_broch_rep or other roles are defined
+    is_broch_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "BROCHURE")
+    
+    if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
+        st.subheader("Add Contribution")
+        proj_members = [m["name"] for m in st.session_state.data["members"] if m["project"] == view_proj]
+        
+        if proj_members:
+            # The Form starts here
+            with st.form("time_input_form"):
+                target = st.selectbox("Select Member", proj_members)
+                
+                # Create two columns INSIDE the form
+                col_h, col_m = st.columns(2)
+                
+                # Put the inputs inside the columns
+                h = col_h.number_input("Hours", min_value=0, max_value=24, value=0)
+                m = col_m.number_input("Minutes", min_value=0, max_value=59, value=0)
+                
+                # The Submit Button
+                if st.form_submit_button("➕ Add Time to Record"):
+                    total_new_minutes = (h * 60) + m
+                    
+                    if total_new_minutes > 0:
+                        # Ensure contributions dict exists
+                        if "contributions" not in st.session_state.data:
+                            st.session_state.data["contributions"] = {}
+                        
+                        # Update the value
+                        current_total = st.session_state.data["contributions"].get(target, 0)
+                        st.session_state.data["contributions"][target] = current_total + total_new_minutes
+                        
+                        save_data()
+                        st.success(f"Added {h}h {m}m to {target}")
+                        st.rerun()
+                    else:
+                        st.warning("Please enter a time greater than 0.")
+        else:
+            st.info("No members found in this project to assign time to.")
+
+    st.divider()
+    st.subheader("📊 Project Progress Summary")
+
+    # 2. SAFE TABLE DISPLAY
+    all_contribs = st.session_state.data.get('contributions', {})
+    sum_list = []
+    
+    for m in st.session_state.data.get("members", []):
+        if m.get("project") == view_proj:
+            mins = all_contribs.get(m['name'], 0)
+            sum_list.append({
+                "Name": m["name"], 
+                "Role": m.get("sub_role", "Member"),
+                "Total Time": f"{mins//60}h {mins%60}m"
+            })
+    
+    if sum_list: 
+        st.table(pd.DataFrame(sum_list))
+    else:
+        st.info("No contribution data found for this project.")
+        
         with t2:
             with st.form("e_man"):
                 p = st.selectbox("Project", ["SKIT", "BROCHURE"])
