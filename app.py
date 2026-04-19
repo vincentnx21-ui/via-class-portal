@@ -135,6 +135,19 @@ if st.sidebar.button("🔓 Logout"):
     st.session_state.authenticated = False
     st.rerun()
 
+# --- SIDEBAR UI ---
+st.sidebar.markdown(f"### 👤 {c_name}")
+# Define this BEFORE it is used in any tabs
+view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"]) 
+
+if st.sidebar.button("🔓 Logout", use_container_width=True):
+    st.session_state.authenticated = False
+    st.rerun()
+
+# --- 6. PAGE CONTENT ---
+# Now view_proj is guaranteed to exist for the tabs below
+with active_tab[0]: 
+    st.title(f"🚀 {view_proj} Project Portal")
 # --- TAB 0: DASHBOARD ---
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
