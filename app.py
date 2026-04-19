@@ -158,7 +158,7 @@ with active_tab[0]:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-    st.subheader("📅 Event RSVP")
+        st.subheader("📅 Event RSVP")
     # Separate events into 'Current' and 'History'
     all_events = st.session_state.data.get("events", [])
     today = date.today()
