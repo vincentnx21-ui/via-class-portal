@@ -12,17 +12,37 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 # --- CUSTOM CSS ---
 st.markdown("""
     <style>
+    /* Main background */
     .main { background-color: #f5f7f9; }
-    div.stButton > button:first-child {
-        background-color: #007bff;
-        color: white;
-        border-radius: 10px;
+
+    /* Style the Tabs */
+    button[data-baseweb="tab"] {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1e293b; /* Dark text for unselected */
+        background-color: #e2e8f0; /* Light grey for unselected */
+        border-radius: 10px 10px 0px 0px;
+        padding: 10px 20px;
+        margin-right: 5px;
+        transition: 0.3s;
     }
-    section[data-testid="stSidebar"] {
-        background-color: #1e293b !important;
+
+    /* Style for the ACTIVE (selected) tab */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #1e293b !important; /* Dark blue background */
+        color: white !important; /* White text */
+        border-bottom: 3px solid #007bff;
     }
-    section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] label {
-        color: white !important;
+
+    /* Remove the default underline Streamlit adds */
+    div[data-plugin="stTabs"] div[role="tablist"] {
+        border-bottom: none;
+        gap: 0px;
+    }
+    
+    /* Hover effect */
+    button[data-baseweb="tab"]:hover {
+        background-color: #cbd5e1;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -146,35 +166,49 @@ if not st.session_state.authenticated:
 # --- 5. NAVIGATION ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
 
-# Sidebar Profile Header
-st.sidebar.markdown(f"### 👤 Welcome, \n**{c_name}**")
-st.sidebar.caption(f"Role: {c_role}")
+st.sidebar.markdown(f"### 👤 {c_name}")
+view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"])
 
-# Split Navigation into logical groups
-st.sidebar.markdown("---")
-view_proj = st.sidebar.radio("📁 Current Project", ["SKIT", "BROCHURE"])
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("📍 Navigation")
-nav_options = {
-    "🏠 Dashboard": "Dashboard",
-    "📝 Attendance": "Attendance",
-    "🕒 Activity Log": "Activity Log",
-    "📊 Progress Tracker": "Contribution Tracker"
-}
-
-# Only show Management to Chairman
-if c_role == "Chairman":
-    nav_options["⚙️ Admin Center"] = "Management Center"
-
-# Create the menu
-choice = st.sidebar.radio("Go to", list(nav_options.keys()), label_visibility="collapsed")
-page = nav_options[choice]
-
-st.sidebar.markdown("---")
 if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
+
+# --- MAIN TAB NAVIGATION (Replaces Radio Buttons) ---
+# This creates the "Darker when pressed" menu with no dots
+tabs = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
+if c_role == "Chairman":
+    tabs.append("⚙️ Admin")
+
+# This creates the horizontal menu at the top
+active_tab = st.tabs(tabs)
+
+# --- PAGE CONTENT ---
+
+# 1. Dashboard Logic
+with active_tab[0]:
+    st.title(f"🚀 {view_proj} Dashboard")
+    # ... paste your Dashboard code here ...
+
+# 2. Attendance Logic
+with active_tab[1]:
+    st.title("📝 Attendance Tracker")
+    # ... paste your Attendance code here ...
+
+# 3. Activity Log Logic
+with active_tab[2]:
+    st.title("🕒 Activity Log")
+    # ... paste your Log code here ...
+
+# 4. Progress Logic
+with active_tab[3]:
+    st.title("📊 Contribution Progress")
+    # ... paste your Contribution Tracker code here ...
+
+# 5. Admin Logic (if exists)
+if c_role == "Chairman":
+    with active_tab[4]:
+        st.title("⚙️ Management Center")
+        # ... paste your Management Center code here ...
     
 # --- 6. DASHBOARD ---
 if page == "Dashboard":
