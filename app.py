@@ -21,8 +21,6 @@ if not firebase_admin._apps:
         # STEP 1: Define the URL clearly
         # Make sure this link is YOURS from the Firebase Console
         URL = "https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-
-        st.write(f"Testing URL: {URL}")
         
         # STEP 2: Initialize
         firebase_admin.initialize_app(cred, {
