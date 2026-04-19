@@ -597,21 +597,37 @@ if is_chair:
             st.subheader("🗑️ Manage Roster")
             col_skit, col_broch = st.columns(2)
             
+            # --- SKIT SECTION ---
             with col_skit:
-                st.write("🎭 **SKIT**")
-                skit_members = [x for x in st.session_state.data["members"] if x['project']=="SKIT"]
-                for i, m in enumerate(skit_members):
-                    if st.button(f"Delete {m['name']}", key=f"ds_{i}"):
-                        st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
-                        save_data(); st.rerun()
+                st.write("🎭 **SKIT TEAM**")
+                # We create a unique list just for Skit
+                skit_list = [x for x in st.session_state.data["members"] if x['project'] == "SKIT"]
+                
+                if not skit_list:
+                    st.caption("No members in Skit.")
+                else:
+                    for i, m in enumerate(skit_list):
+                        # Unique key 'del_skit_' prevents conflict with Brochure buttons
+                        if st.button(f"Remove {m['name']}", key=f"del_skit_{i}"):
+                            st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
+                            save_data()
+                            st.rerun()
             
+            # --- BROCHURE SECTION ---
             with col_broch:
-                st.write("📄 **BROCHURE**")
-                broch_members = [x for x in st.session_state.data["members"] if x['project']=="BROCHURE"]
-                for i, m in enumerate(broch_members):
-                    if st.button(f"Delete {m['name']}", key=f"db_{i}"):
-                        st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
-                        save_data(); st.rerun()
+                st.write("📄 **BROCHURE TEAM**")
+                # We create a unique list just for Brochure
+                broch_list = [x for x in st.session_state.data["members"] if x['project'] == "BROCHURE"]
+                
+                if not broch_list:
+                    st.caption("No members in Brochure.")
+                else:
+                    for i, m in enumerate(broch_list):
+                        # Unique key 'del_broch_' ensures this is distinct
+                        if st.button(f"Remove {m['name']}", key=f"del_broch_{i}"):
+                            st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
+                            save_data()
+                            st.rerun()
 
         # --- SUB-TAB 2: EVENTS ---
         with t2:
