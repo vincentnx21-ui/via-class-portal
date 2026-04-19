@@ -136,7 +136,7 @@ if st.sidebar.button("🔓 Logout"):
     st.rerun()
 
 # --- TAB 0: DASHBOARD ---
-with active_tab[0]:
+with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
     col_a, col_b, col_c = st.columns(3)
     if not is_teach:
@@ -150,31 +150,64 @@ with active_tab[0]:
     col_c.metric("Project Status", "Active", delta="On Track")
 
     c1, c2 = st.columns([2, 1])
-    with c1:
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
         st.subheader("📅 Event RSVP")
-        if not events: st.info("No events scheduled.")
+        events = [e for e in st.session_state.data["events"] if e["project"] == view_proj] [cite: 28]
+        
+        if not events:
+            st.info("No events scheduled yet.") [cite: 28]
         else:
             for i, e in enumerate(events):
-                is_can = e.get("status") == "Cancelled"
+                is_cancelled = e.get("status") == "Cancelled" [cite: 29]
+                e_id = f"{e['project']}_{e['date']}_{e['start_time']}" [cite: 33]
+                
                 with st.container(border=True):
-                    if is_can: st.error(f"🚫 **CANCELLED: {e['type']}**")
+                    if is_cancelled:
+                        st.error(f"🚫 **CANCELLED: {e['type']}**") [cite: 29]
                     else:
-                        st.write(f"**{e['type']}**")
-                        st.caption(f"📍 {e.get('venue','N/A')} | ⏰ {e['start_time']}")
-                        with st.expander("Update My RSVP"):
-                            f_k = f"rsvp_{view_proj}_{i}"
-                            with st.form(f_k):
-                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"], key=f"s_{f_k}")
-                                r = st.text_input("Note", key=f"n_{f_k}")
-                                if st.form_submit_button("Confirm RSVP"):
-                                    if s:
-                                        eid = f"{e['project']}_{e['date']}_{e['start_time']}"
-                                        st.session_state.data["rsvp"] = [x for x in st.session_state.data.get("rsvp", []) if not (x['event_id'] == eid and x['name'] == c_name)]
-                                        st.session_state.data["rsvp"].append({"event_id": eid, "name": c_name, "status": s, "note": r})
-                                        save_data(); st.success("RSVP Saved!"); st.rerun()
-                                    else: st.error("Select status!")
+                        st.write(f"**{e['type']}**") [cite: 30]
+                        st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") [cite: 31]
 
-    with c2:
+                        # --- NEW: RSVP RESPONSES VIEW ---
+                        st.markdown("---")
+                        st.markdown("**Current Responses:**")
+                        
+                        # Filter RSVPs for this specific event
+                        event_responses = [r for r in st.session_state.data.get("rsvp", []) if r['event_id'] == e_id] [cite: 35]
+                        
+                        if not event_responses:
+                            st.caption("No responses yet.")
+                        else:
+                            # Create a small table or list for responses
+                            for resp in event_responses:
+                                status_emoji = {
+                                    "Attending": "✅",
+                                    "Late": "⏳",
+                                    "Not Attending": "❌"
+                                }.get(resp['status'], "❓")
+                                
+                                st.markdown(f"{status_emoji} **{resp['name']}**: {resp['status']}")
+                                if resp.get('note'):
+                                    st.caption(f"💬 Reason: {resp['note']}") [cite: 32, 34]
+                        
+                        # --- EXISTING: Update My RSVP Expander ---
+                        with st.expander("Update My RSVP"):
+                            form_key = f"form_rsvp_{view_proj}_{i}"
+                            with st.form(key=form_key):
+                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"], key=f"status_{form_key}")
+                                r = st.text_input("Note/Reason", key=f"note_{form_key}") [cite: 32]
+                                if st.form_submit_button("Confirm RSVP", key=f"btn_{form_key}"):
+                                    if s:
+                                        new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r} [cite: 34]
+                                        current_rsvps = st.session_state.data.get("rsvp", [])
+                                        st.session_state.data["rsvp"] = [x for x in current_rsvps if not (x['event_id'] == e_id and x['name'] == c_name)] [cite: 35]
+                                        st.session_state.data["rsvp"].append(new_rsvp) [cite: 35]
+                                        save_data() [cite: 36]
+                                        st.rerun() [cite: 36]
+
+    with col2:
         st.subheader("👥 Team Roster")
         mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
         if not mems: st.write("No members.")
