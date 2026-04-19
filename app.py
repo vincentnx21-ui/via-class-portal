@@ -190,8 +190,6 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
 # Instead of: if page == "Dashboard":
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
-    if page == "Dashboard":
-        st.title(f"🚀 {view_proj} Project Portal")
     
     # --- QUICK STATS ---
     col_a, col_b, col_c = st.columns(3)
