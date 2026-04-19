@@ -164,19 +164,21 @@ if not st.session_state.authenticated:
     st.stop()
 
 # --- 5. NAVIGATION (The Tab Menu) ---
-
-# 1. First, define who the user is
 c_name = st.session_state.u_name
 c_role = st.session_state.u_role
 
-# 2. Define the list of tabs (The computer needs to know this first!)
+# ADD THESE LINES HERE to fix the NameError
+is_chair = (c_role == "Chairman")
+is_teach = (c_role == "Teacher")
+# Check if they are a representative (adjust 'is_rep' to match your data key)
+is_skit_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "SKIT")
+
+# Define tabs
 tabs_list = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
-if c_role == "Chairman":
+if is_chair:
     tabs_list.append("⚙️ Admin")
 
-# 3. NOW create the tabs using that list
 active_tab = st.tabs(tabs_list)
-
 # --- SIDEBAR UI ---
 st.sidebar.markdown(f"### 👤 {c_name}")
 view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"])
