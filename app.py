@@ -261,7 +261,8 @@ with active_tab[0]:
                     else:
                         st.write(f"**{e['type']}**")
                     
-                    st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
+                    venue = e.get('venue', 'N/A') 
+                    st.caption(f"📍 {venue} | ⏰ {e['start_time']}")
 
                     if not is_cancelled:
                         with st.expander("Update My RSVP"):
@@ -664,9 +665,10 @@ if st.session_state.u_role == "Chairman":
                 type_ev = st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session", "Production Day"])
                 d_ev = st.date_input("Date")
                 s_ev = st.time_input("Start Time")
+                v_ev = st.text_input("Venue")
                 if st.form_submit_button("Add Event"):
                     st.session_state.data["events"].append({
-                        "project": ep, "type": type_ev, "date": str(d_ev), 
+                        "project": ep, "type": type_ev, "date", "venue": str(d_ev), 
                         "start_time": str(s_ev), "status": "Active"
                     })
                     save_data(); st.success("Event Created"); st.rerun()
