@@ -178,7 +178,7 @@ with active_tab[0]:
 
     # --- DISPLAY CURRENT EVENTS ---
     if not current_events:
-        st.info("No upcoming events.") [cite: 28]
+        st.info("No upcoming events.")
     else:
         for i, e in enumerate(current_events):
             e_id = f"{e['project']}_{e['date']}_{e['start_time']}" [cite: 33]
