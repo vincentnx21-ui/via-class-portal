@@ -184,7 +184,7 @@ view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"])
 if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
-
+    
 # --- 6. PAGE CONTENT ---
 
 # Instead of: if page == "Dashboard":
@@ -337,14 +337,6 @@ with active_tab[2]:
         df_logs = df_logs[["date", "minutes", "task"]].sort_values(by="date", ascending=False)
         st.table(df_logs)
 
-# --- DASHBOARD TAB ---
-with active_tab[0]:
-    
-# --- ATTENDANCE TAB ---
-
-
-# --- ACTIVITY LOG TAB ---
-with active_tab[2]:
     
 # --- CONTRIBUTION TRACKER TAB ---
 with active_tab[3]:
