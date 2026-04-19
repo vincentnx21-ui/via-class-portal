@@ -271,7 +271,8 @@ with active_tab[3]:
                 mins = all_c.get(f"{m['name']}_{proj}", 0)
                 c1, c2 = st.columns([1, 3])
                 c1.write(f"**{m['name']}**")
-                c2.progress(min(1.0, mins/300), text=f"{mins//60}h {mins%60}m")
+                progress_val = max(0.0, min(1.0, mins / 300))
+                c2.progress(progress_val, text=f"{mins//60}h {mins%60}m")
 
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
