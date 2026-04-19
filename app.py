@@ -333,7 +333,6 @@ with active_tab[2]:
 
 # --- CONTRIBUTION TRACKER TAB ---
 with active_tab[3]:
-    elif page == "Contribution Tracker":
     st.title("⏳ Time Management")
     if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
         st.subheader("Add Contribution")
