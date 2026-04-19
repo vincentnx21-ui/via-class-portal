@@ -268,7 +268,11 @@ with active_tab[0]:
                         with st.expander("Update My RSVP"):
                             # Unique key includes project and index to avoid collisions
                             with st.form(f"rsvp_form_{i}_{view_proj}"):
-                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
+                                if st.form_submit_button("Confirm RSVP"):
+                                    if s is None:
+                                        st.error("Please select a status (Attending, Late, or Not Attending)!")
+                                    else:
+                                        e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
                                 r = st.text_input("Note/Reason")
                                 if st.form_submit_button("Confirm RSVP"):
                                     e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
