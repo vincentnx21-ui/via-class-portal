@@ -233,20 +233,27 @@ with active_tab[0]:
             st.info("No events scheduled yet.")
         else:
             for i, e in enumerate(events):
-                e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
-                # Expander for cleaner look
+                # CHECK STATUS
+                is_cancelled = e.get("status") == "Cancelled"
+                
                 with st.container(border=True):
-                    st.write(f"**{e['type']}**")
-                    st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
+                    # Show a Red Title if cancelled
+                    if is_cancelled:
+                        st.error(f"🚫 **CANCELLED: {e['type']}**")
+                        if e.get("note"):
+                            st.warning(f"**Reason:** {e['note']}")
+                    else:
+                        st.write(f"**{e['type']}**")
                     
-                    # Simplified RSVP form
-                    with st.expander("Update My RSVP"):
-                        with st.form(f"v_{i}"):
-                            s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
-                            r = st.text_input("Note/Reason", placeholder="e.g. Bringing props")
-                            if st.form_submit_button("Confirm"):
-                                # ... (Keep your existing save logic here) ...
-                                save_data(); st.rerun()
+                    st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
+
+                    # Only show RSVP form if NOT cancelled
+                    if not is_cancelled:
+                        with st.expander("Update My RSVP"):
+                            # ... (Your existing RSVP form code here) ...
+                            pass 
+                    else:
+                        st.info("RSVP is disabled for this cancelled event.")
 
     with col2:
         st.subheader("👥 Team Roster")
@@ -400,32 +407,35 @@ if c_role == "Chairman":
                     save_data(); st.rerun()
                     
             st.divider()
-        st.subheader("🗑️ Cancel / Delete Events")
+        st.subheader("📝 Manage Scheduled Events")
         
-        # Get all current events
         all_evs = st.session_state.data.get("events", [])
         
         if not all_evs:
             st.write("No events scheduled.")
         else:
             for i, ev in enumerate(all_evs):
-                col1, col2 = st.columns([4, 1])
-                # Show event details
-                col1.write(f"**{ev['type']}** - {ev['date']} ({ev['project']})")
-                
-                # The "Cancel" Button
-                if col2.button("Cancel Event", key=f"del_ev_{i}", type="secondary"):
-                    # Remove the event from the list
-                    st.session_state.data["events"].pop(i)
+                # We use a unique key for every event to avoid conflicts
+                with st.expander(f"⚙️ Manage: {ev['type']} ({ev['date']})"):
+                    col1, col2 = st.columns(2)
                     
-                    # Optional: Also remove any RSVPs or Attendance linked to this event
-                    # e_id = f"{ev['project']}_{ev['date']}_{ev['start_time']}"
-                    # st.session_state.data["rsvp"] = [r for r in st.session_state.data["rsvp"] if r['event_id'] != e_id]
+                    # Edit Note or Details
+                    new_note = st.text_input("Cancellation Note / Update", value=ev.get("note", ""), key=f"note_{i}")
+                    new_status = st.selectbox("Event Status", ["Active", "Cancelled"], 
+                                            index=0 if ev.get("status") != "Cancelled" else 1, key=f"stat_{i}")
                     
-                    save_data()
-                    st.success(f"Event '{ev['type']}' has been cancelled.")
-                    st.rerun()
-                    
+                    if st.button("Save Changes", key=f"save_ev_{i}"):
+                        st.session_state.data["events"][i]["note"] = new_note
+                        st.session_state.data["events"][i]["status"] = new_status
+                        save_data()
+                        st.success("Event updated!")
+                        st.rerun()
+
+                    if st.button("🗑️ Delete Permanently", key=f"force_del_{i}"):
+                        st.session_state.data["events"].pop(i)
+                        save_data()
+                        st.rerun()
+                        
         with t3:
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
                 c1, c2 = st.columns([4, 1])
