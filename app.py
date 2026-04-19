@@ -190,19 +190,6 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
 # Instead of: if page == "Dashboard":
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
-    # ... (all your dashboard code goes here, indented)
-
-# Instead of: elif page == "Attendance":
-with active_tab[1]:
-    st.title("📝 Attendance Tracker")
-    # ... (all your attendance code goes here, indented)
-
-# Instead of: elif page == "Activity Log":
-with active_tab[2]:
-    # (The Activity Log code I gave you earlier goes here)
-
-# --- DASHBOARD TAB ---
-with active_tab[0]:
     if page == "Dashboard":
         st.title(f"🚀 {view_proj} Project Portal")
     
@@ -264,7 +251,8 @@ with active_tab[0]:
     st.title(f"🚀 {view_proj} Dashboard")
     # ... (the stat cards, the RSVP form, etc.)
 
-# --- ATTENDANCE TAB ---
+
+# Instead of: elif page == "Attendance":
 with active_tab[1]:
     st.title("✅ Attendance")
     evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
@@ -291,7 +279,7 @@ with active_tab[1]:
     st.title("📝 Attendance Tracker")
     # ...
 
-# --- ACTIVITY LOG TAB ---
+# Instead of: elif page == "Activity Log":
 with active_tab[2]:
     st.title("🕒 Activity Log")
     st.info("Submit your hours here. The Chairman will verify these for VIA records.")
@@ -349,6 +337,15 @@ with active_tab[2]:
         df_logs = df_logs[["date", "minutes", "task"]].sort_values(by="date", ascending=False)
         st.table(df_logs)
 
+# --- DASHBOARD TAB ---
+with active_tab[0]:
+    
+# --- ATTENDANCE TAB ---
+
+
+# --- ACTIVITY LOG TAB ---
+with active_tab[2]:
+    
 # --- CONTRIBUTION TRACKER TAB ---
 with active_tab[3]:
     st.title("⏳ Time Management")
