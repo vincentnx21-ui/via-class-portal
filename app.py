@@ -496,7 +496,7 @@ if is_chair:
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         
-        with t1:
+    with t1:
         st.subheader("➕ Add Official Member")
     with st.form(key="admin_roster_entry_form", clear_on_submit=True):
         col_n, col_p = st.columns(2)
