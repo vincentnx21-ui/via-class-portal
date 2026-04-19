@@ -291,7 +291,7 @@ if not is_cancelled:
                     save_data()
                     st.success("RSVP Saved!")
                     st.rerun()    
-                    else:
+            else:
                         st.info("RSVP disabled for cancelled event.")
 
     with col2:
