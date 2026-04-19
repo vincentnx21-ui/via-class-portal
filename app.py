@@ -128,6 +128,13 @@ def save_data():
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
+# Ensure all required data keys exist so the rest of the app doesn't crash
+required_keys = ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance"]
+for key in required_keys:
+    if key not in st.session_state.data:
+        # Create the missing folder (as a list or dict depending on the key)
+        st.session_state.data[key] = {} if key in ["contributions", "attendance"] else []
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "u_name" not in st.session_state:
@@ -348,16 +355,21 @@ with active_tab[3]:
             with st.form("time_input"):
                 target = st.selectbox("Select Member", proj_members)
                 c_h, c_m = st.columns(2)
-                h = c_h.number_input("Hours", 0, 24)
-                m = c_m.number_input("Minutes", 0, 59)
-                if st.form_submit_button("Add Time"):
-                    total = (h * 60) + m
-                    st.session_state.data["contributions"][target] = st.session_state.data["contributions"].get(target, 0) + total
-                    save_data(); st.rerun()
-
-    sum_list = [{"Name": m["name"], "Total": f"{st.session_state.data['contributions'].get(m['name'],0)//60}h {st.session_state.data['contributions'].get(m['name'],0)%60}m"} 
-               for m in st.session_state.data["members"] if m["project"] == view_proj]
-    if sum_list: st.table(pd.DataFrame(sum_list))
+                # --- REPLACE LINE 358 WITH THIS ---
+    all_contribs = st.session_state.data.get('contributions', {})
+    sum_list = []
+    for m in st.session_state.data.get("members", []):
+        if m.get("project") == view_proj:
+            mins = all_contribs.get(m['name'], 0)
+            sum_list.append({
+                "Name": m["name"], 
+                "Total": f"{mins//60}h {mins%60}m"
+            })
+    
+    if sum_list: 
+        st.table(pd.DataFrame(sum_list))
+    else:
+        st.info("No member data found.")
     st.title("📊 Progress Tracker")
     # ...
 
