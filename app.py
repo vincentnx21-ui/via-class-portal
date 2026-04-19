@@ -403,16 +403,22 @@ with active_tab[3]:
 with active_tab[4]:
     st.title("📁 Official Class Directory")
     
-    # 1. TOP LEVEL STATS (Quick Overview for Teacher)
+    # 1. TOP LEVEL STATS (Using Average instead of Total)
     all_members = st.session_state.data.get("members", [])
     all_contribs = st.session_state.data.get("contributions", {})
     all_logs = st.session_state.data.get("logs", [])
     
     m_col1, m_col2, m_col3 = st.columns(3)
-    total_h = sum(all_contribs.values()) // 60
-    m_col1.metric("Total Members", len(all_members))
-    m_col2.metric("Total Class Hours", f"{total_h}h")
-    m_col3.metric("Active Projects", "2") # Skit & Brochure
+    
+    # Calculate Average Hours
+    total_mins = sum(all_contribs.values())
+    num_members = len(all_members)
+    avg_mins = total_mins / num_members if num_members > 0 else 0
+    avg_h = avg_mins / 60
+    
+    m_col1.metric("Total Members", num_members)
+    m_col2.metric("Avg. Hours per Student", f"{avg_h:.1f}h") # Shows 1 decimal place (e.g., 5.5h)
+    m_col3.metric("Active Projects", "2")
     
     st.divider()
 
@@ -424,11 +430,11 @@ with active_tab[4]:
         for m in all_members:
             name = m['name']
             
-            # Time calculation
+            # Time calculation for individual
             t_mins = all_contribs.get(name, 0)
             time_fmt = f"{t_mins // 60}h {t_mins % 60}m"
             
-            # Clean up task history
+            # Task history
             u_tasks = [l['task'] for l in all_logs if l['user'] == name]
             recent = " | ".join(u_tasks[-2:]) if u_tasks else "No activity yet"
             
@@ -443,7 +449,7 @@ with active_tab[4]:
         
         df = pd.DataFrame(summary_data)
 
-        # 3. SEARCH & FILTER BAR
+        # 3. SEARCH & FILTER
         f1, f2 = st.columns([2, 1])
         search = f1.text_input("🔍 Search Classmate", placeholder="Type a name...")
         p_filter = f2.selectbox("Filter Project", ["All Projects", "SKIT", "BROCHURE"])
@@ -453,13 +459,13 @@ with active_tab[4]:
         if p_filter != "All Projects":
             df = df[df["PROJECT"] == p_filter]
 
-        # 4. ENHANCED DATAFRAME DISPLAY
+        # 4. DATAFRAME DISPLAY
         st.dataframe(
             df,
             use_container_width=True,
             hide_index=True,
             column_config={
-                "NAME": st.column_config.TextColumn("👤 Name", help="Official roster name"),
+                "NAME": st.column_config.TextColumn("👤 Name"),
                 "PROJECT": st.column_config.TextColumn("📁 Project"),
                 "ROLE": st.column_config.TextColumn("🎭 Role"),
                 "VIA TIME": st.column_config.TextColumn("⏱️ Total Time"),
@@ -468,7 +474,7 @@ with active_tab[4]:
             }
         )
 
-        # 5. DOWNLOAD OPTION (Useful for Teachers/Reports)
+        # 5. CSV DOWNLOAD
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 Download Directory as CSV",
