@@ -311,13 +311,22 @@ with active_tab[3]:
 
     sum_list = [{"Name": m["name"], "Total": f"{all_contribs.get(m['name'], 0)//60}h"} for m in members]
     st.table(pd.DataFrame(sum_list))
+    # Make sure the form key here is unique:
+    with st.form(key=f"time_mgmt_{view_proj}"):
+        # ...
+        st.form_submit_button("Add Time")
 
-# --- TAB 4: ADMIN ---
+# --- TAB 4: ADMIN (Starts here) ---
 if is_chair:
     with active_tab[4]:
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         
+        with t1:
+            # PUT YOUR MEMBER INPUT HERE (as we discussed)
+            st.subheader("➕ Add New Member")
+            # ...
+
         # --- 6. PAGE CONTENT ---
 
 # --- TAB 0: DASHBOARD ---
