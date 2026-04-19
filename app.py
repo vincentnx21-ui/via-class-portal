@@ -409,32 +409,33 @@ if c_role == "Chairman":
             st.divider()
         st.subheader("📝 Manage Scheduled Events")
         
-        all_evs = st.session_state.data.get("events", [])
-        
-        if not all_evs:
-            st.write("No events scheduled.")
-        else:
-            for i, ev in enumerate(all_evs):
-                # We use a unique key for every event to avoid conflicts
-                with st.expander(f"⚙️ Manage: {ev['type']} ({ev['date']})"):
-                    col1, col2 = st.columns(2)
-                    
-                    # Edit Note or Details
-                    new_note = st.text_input("Cancellation Note / Update", value=ev.get("note", ""), key=f"note_{i}")
-                    new_status = st.selectbox("Event Status", ["Active", "Cancelled"], 
-                                            index=0 if ev.get("status") != "Cancelled" else 1, key=f"stat_{i}")
-                    
-                    if st.button("Save Changes", key=f"save_ev_{i}"):
-                        st.session_state.data["events"][i]["note"] = new_note
-                        st.session_state.data["events"][i]["status"] = new_status
-                        save_data()
-                        st.success("Event updated!")
-                        st.rerun()
+        # --- INSIDE YOUR ADMIN TAB (with active_tab[4] -> with t2) ---
+all_evs = st.session_state.data.get("events", [])
 
-                    if st.button("🗑️ Delete Permanently", key=f"force_del_{i}"):
-                        st.session_state.data["events"].pop(i)
-                        save_data()
-                        st.rerun()
+if not all_evs:
+    st.write("No events scheduled.")
+else:
+    for i, ev in enumerate(all_evs):
+        with st.expander(f"⚙️ Manage: {ev['type']} ({ev['date']})"):
+            # We put the editing part inside a FORM
+            with st.form(key=f"edit_form_{i}"):
+                new_note = st.text_input("Cancellation Note / Update", value=ev.get("note", ""))
+                new_status = st.selectbox("Event Status", ["Active", "Cancelled"], 
+                                        index=0 if ev.get("status") != "Cancelled" else 1)
+                
+                # THIS IS THE REQUIRED SUBMIT BUTTON
+                if st.form_submit_button("✅ Save Changes"):
+                    st.session_state.data["events"][i]["note"] = new_note
+                    st.session_state.data["events"][i]["status"] = new_status
+                    save_data()
+                    st.success("Event updated!")
+                    st.rerun()
+
+            # DELETE button must be OUTSIDE the form (or it needs its own form)
+            if st.button("🗑️ Delete Permanently", key=f"force_del_{i}"):
+                st.session_state.data["events"].pop(i)
+                save_data()
+                st.rerun()
                         
         with t3:
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
