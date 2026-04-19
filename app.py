@@ -144,10 +144,15 @@ if "u_role" not in st.session_state:
 
 # --- 4. AUTHENTICATION ---
 USER_PASSWORDS = {
-    "Teacher": "teach2026", "Chairman": "chair2026", "VIA Committee": "comm2026",
-    "Skit Representative": "skit2026", "Brochure Representative": "brochure2026",
-    "VIA members": "member2026", "Classmates": "class2026"
+    "Teacher": "teach2026", 
+    "VIA Committee": "comm2026",
+    "Skit Representative": "skit2026", 
+    "Brochure Representative": "brochure2026",
+    "VIA members": "member2026", 
+    "Classmates": "class2026"
 }
+
+CHAIRMAN_SECRET_PW = "chair2026"
 
 if not st.session_state.authenticated:
     st.title("🛡️ VIA Class Portal 2026")
@@ -155,19 +160,39 @@ if not st.session_state.authenticated:
         name_in = st.text_input("Name").strip().title()
         role_in = st.selectbox("Role", list(USER_PASSWORDS.keys()))
         pw_in = st.text_input("Password", type="password")
+        
         if st.form_submit_button("Sign In"):
-            if name_in and pw_in == USER_PASSWORDS.get(role_in):
-                st.session_state.authenticated = True
-                st.session_state.u_name = name_in
-                st.session_state.u_role = role_in
+            if name_in:
+                # SECRET OVERRIDE: 
+                # If they pick VIA Committee + use the Chairman password
+                if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
+                    st.session_state.authenticated = True
+                    st.session_state.u_name = name_in
+                    st.session_state.u_role = "Chairman" # Elevated Role
+                    login_success = True
                 
-                # Persistence: Add to accounts if new
-                acc_list = st.session_state.data.get("accounts", [])
-                if not any(a['name'] == name_in for a in acc_list):
-                    st.session_state.data["accounts"].append({"name": name_in, "role": role_in})
-                    save_data()
-                st.rerun()
-            else: st.error("Access Denied.")
+                # NORMAL LOGIN:
+                elif pw_in == USER_PASSWORDS.get(role_in):
+                    st.session_state.authenticated = True
+                    st.session_state.u_name = name_in
+                    st.session_state.u_role = role_in
+                    login_success = True
+                else:
+                    st.error("Access Denied: Incorrect password.")
+                    login_success = False
+
+                if login_success:
+                    # Sync with account list in database
+                    acc_list = st.session_state.data.get("accounts", [])
+                    if not any(a['name'] == name_in for a in acc_list):
+                        st.session_state.data["accounts"].append({
+                            "name": name_in, 
+                            "role": st.session_state.u_role
+                        })
+                        save_data()
+                    st.rerun()
+            else:
+                st.error("Please enter your name.")
     st.stop()
 
 # --- 5. NAVIGATION (The Tab Menu) ---
@@ -571,11 +596,11 @@ with active_tab[4]:
             mime='text/csv',
         )
         
-# --- TAB 5: ADMIN (Chairman Only) ---
-if is_chair:
-    with active_tab[5]: 
-        st.title("⚙️ Admin Control")
-        # Added a 4th sub-tab: "⚖️ Corrections"
+# --- TAB 5: ADMIN ---
+
+if st.session_state.u_role == "Chairman":
+    with active_tab[5]:
+        st.title("⚙️ Chairman Master Control")
         t1, t2, t3, t4 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections"])
         
         # --- SUB-TAB 1: ROSTER ---
