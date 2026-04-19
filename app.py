@@ -163,7 +163,7 @@ if not st.session_state.authenticated:
             else: st.error("Access Denied.")
     st.stop()
 
-# --- 5. NAVIGATION ---
+# --- 5. NAVIGATION (The Tab Menu) ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
 
 st.sidebar.markdown(f"### 👤 {c_name}")
@@ -173,43 +173,47 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
 
-# --- MAIN TAB NAVIGATION (Replaces Radio Buttons) ---
-# This creates the "Darker when pressed" menu with no dots
-tabs = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
+# This creates the horizontal menu buttons at the top (No dots!)
+tabs_list = ["🏠 Dashboard", "📝 Attendance", "🕒 Activity Log", "📊 Progress"]
 if c_role == "Chairman":
-    tabs.append("⚙️ Admin")
+    tabs_list.append("⚙️ Admin")
 
-# This creates the horizontal menu at the top
-active_tab = st.tabs(tabs)
+# active_tab is now a list of "containers"
+active_tab = st.tabs(tabs_list)
 
-# --- PAGE CONTENT ---
+# --- 6. PAGE CONTENT (Wrapped in Tabs) ---
 
-# 1. Dashboard Logic
+# --- DASHBOARD TAB ---
 with active_tab[0]:
+    # PASTE ALL YOUR DASHBOARD CODE HERE
     st.title(f"🚀 {view_proj} Dashboard")
-    # ... paste your Dashboard code here ...
+    # ... (the stat cards, the RSVP form, etc.)
 
-# 2. Attendance Logic
+# --- ATTENDANCE TAB ---
 with active_tab[1]:
+    # PASTE ALL YOUR ATTENDANCE CODE HERE
     st.title("📝 Attendance Tracker")
-    # ... paste your Attendance code here ...
+    # ...
 
-# 3. Activity Log Logic
+# --- ACTIVITY LOG TAB ---
 with active_tab[2]:
+    # PASTE ALL YOUR LOG CODE HERE
     st.title("🕒 Activity Log")
-    # ... paste your Log code here ...
+    # ...
 
-# 4. Progress Logic
+# --- CONTRIBUTION TRACKER TAB ---
 with active_tab[3]:
-    st.title("📊 Contribution Progress")
-    # ... paste your Contribution Tracker code here ...
+    # PASTE ALL YOUR CONTRIBUTION CODE HERE
+    st.title("📊 Progress Tracker")
+    # ...
 
-# 5. Admin Logic (if exists)
+# --- ADMIN TAB ---
 if c_role == "Chairman":
     with active_tab[4]:
-        st.title("⚙️ Management Center")
-        # ... paste your Management Center code here ...
-    
+        # PASTE ALL YOUR MANAGEMENT CENTER CODE HERE
+        st.title("⚙️ Admin Control")
+        # ...
+
 # --- 6. DASHBOARD ---
 if page == "Dashboard":
     st.title(f"🚀 {view_proj} Project Portal")
