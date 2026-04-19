@@ -285,7 +285,7 @@ with active_tab[1]:
 with active_tab[2]:
     st.title("🕒 Activity Log")
     with st.expander("➕ Log New Activity"):
-        with st.form("log_form"):
+        with st.form(key=f"log_form_{c_name}_{view_proj}"):
             ld = st.date_input("Date", value=date.today())
             lm = st.number_input("Minutes", min_value=5, step=5)
             lt = st.text_input("Task Description")
@@ -409,7 +409,7 @@ with active_tab[1]:
 with active_tab[2]:
     st.title("🕒 Activity Log")
     with st.expander("➕ Log New Activity"):
-        with st.form("log_form"):
+        with st.form(key=f"log_form_{c_name}_{view_proj}"):
             ld = st.date_input("Date", value=date.today())
             lm = st.number_input("Minutes", min_value=5, step=5)
             lt = st.text_input("Task Description")
