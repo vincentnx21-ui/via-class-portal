@@ -144,7 +144,6 @@ if not st.session_state.authenticated:
     st.stop()
 
 # --- 5. NAVIGATION ---
-# --- 5. NAVIGATION ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
 
 # Sidebar Profile Header
@@ -176,6 +175,7 @@ st.sidebar.markdown("---")
 if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
+    
 # --- 6. DASHBOARD ---
 if page == "Dashboard":
     st.title(f"🚀 {view_proj} Project Portal")
@@ -183,16 +183,17 @@ if page == "Dashboard":
     # --- QUICK STATS ---
     col_a, col_b, col_c = st.columns(3)
     
-    # SAFE CALCULATION: Get contributions, or an empty dict if it doesn't exist
-    contribs = st.session_state.data.get('contributions', {})
-    user_total_minutes = contribs.get(c_name, 0)
-    total_hours = user_total_minutes // 60
+    # SAFE CALCULATION: This prevents the KeyError
+    # It looks for 'contributions'. If missing, it uses an empty dictionary {}
+    all_contribs = st.session_state.data.get('contributions', {})
     
-    upcoming_events = len([e for e in st.session_state.data.get("events", []) if e.get("project") == view_proj])
+    # Now we get the specific user's minutes. If they aren't there, use 0.
+    user_minutes = all_contribs.get(c_name, 0)
+    total_hours = user_minutes // 60
     
-    # Calculate stats
-    total_hours = st.session_state.data['contributions'].get(c_name, 0) // 60
-    upcoming_events = len([e for e in st.session_state.data["events"] if e["project"] == view_proj])
+    # Safe check for events too
+    all_events = st.session_state.data.get("events", [])
+    upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
     
     with col_a:
         st.metric("Your VIA Hours", f"{total_hours}h")
@@ -200,8 +201,6 @@ if page == "Dashboard":
         st.metric("Upcoming Events", upcoming_events)
     with col_c:
         st.metric("Project Status", "Active", delta="On Track")
-
-    st.markdown("---")
 
     # --- MAIN CONTENT ---
     col1, col2 = st.columns([2, 1])
