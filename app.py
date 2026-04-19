@@ -82,6 +82,13 @@ def save_data():
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
+    st.session_state._migrated = True
+
+    for log in st.session_state.data.get("logs", []):
+        for c in log.get("comments", []):
+            if "comment_id" not in c:
+                c["comment_id"] = str(datetime.now().timestamp())
+                
 required_keys = ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance"]
 for key in required_keys:
     if key not in st.session_state.data:
@@ -294,53 +301,38 @@ with active_tab[2]:
                             st.rerun()
             
 for c in log.get("comments", []):
-    st.markdown(f"**{c['teacher']}**")
-    st.write(c["text"])
 
-    if is_teach:
+    comment_id = c.get("comment_id")
+
+    st.markdown(f"**{c.get('teacher', 'Unknown')}**")
+    st.write(c.get("text", ""))
+
+    if is_teach and comment_id:
+
         c1, c2 = st.columns(2)
 
         # 🗑️ DELETE COMMENT
-        if c1.button("🗑️ Delete", key=f"del_c_{c['comment_id']}"):
+        if c1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
             log["comments"] = [
                 x for x in log["comments"]
-                if x.get("comment_id") != c["comment_id"]
+                if x.get("comment_id") != comment_id
             ]
             save_data()
             st.rerun()
 
         # ✏️ EDIT COMMENT
         with c2.expander("✏️ Edit"):
-            with st.form(f"edit_c_{c['comment_id']}"):
-                new_text = st.text_area("Edit comment", value=c["text"])
+            with st.form(f"edit_c_{comment_id}"):
+                new_text = st.text_area("Edit comment", value=c.get("text", ""))
 
                 if st.form_submit_button("Save"):
                     for x in log["comments"]:
-                        if x.get("comment_id") == c["comment_id"]:
+                        if x.get("comment_id") == comment_id:
                             x["text"] = new_text
 
                     save_data()
                     st.rerun()
-
-# ➕ ADD COMMENT (teacher only, outside loop!)
-if is_teach:
-    with st.expander("📝 Add Comment"):
-        with st.form(f"cmt_{log['log_id']}"):
-            tc = st.text_area("Feedback")
-
-            if st.form_submit_button("Post"):
-                for l in st.session_state.data["logs"]:
-                    if l.get("log_id") == log["log_id"]:
-                        l.setdefault("comments", []).append({
-                            "comment_id": f"c_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                            "teacher": c_name,
-                            "text": tc,
-                            "time": str(datetime.now())
-                        })
-
-                save_data()
-                st.rerun()
-                
+        
 # --- TAB 3: PROGRESS ---
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
