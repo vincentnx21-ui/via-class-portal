@@ -186,7 +186,7 @@ active_tab = st.tabs(tabs_list)
 # --- DASHBOARD TAB ---
 with active_tab[0]:
     if page == "Dashboard":
-    st.title(f"🚀 {view_proj} Project Portal")
+        st.title(f"🚀 {view_proj} Project Portal")
     
     # --- QUICK STATS ---
     col_a, col_b, col_c = st.columns(3)
