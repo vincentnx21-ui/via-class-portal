@@ -401,26 +401,70 @@ with active_tab[3]:
 
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
-    st.title("📁 Class Directory")
-    st.info("List of all registered accounts in the VIA Class Portal.")
+    st.title("📁 Class Directory & VIA Summary")
+    st.info("Below is the consolidated list of all members and their total contributions tracked via the dashboard.")
     
+    # Extract data from the same sources as the Dashboard
     all_accounts = st.session_state.data.get("accounts", [])
+    all_contribs = st.session_state.data.get("contributions", {})
+    all_logs = st.session_state.data.get("logs", [])
     
     if not all_accounts:
-        st.write("No accounts registered yet.")
+        st.warning("No accounts have been registered in the system yet.")
     else:
-        # Create a clean DataFrame for the class to view
-        df_dir = pd.DataFrame(all_accounts)
+        # Prepare the list for the table
+        summary_data = []
         
-        # Rename columns for a professional look
-        df_dir.columns = ["Student Name", "Designated Role"]
+        for acc in all_accounts:
+            name = acc['name']
+            role = acc['role']
+            
+            # 1. Get VIA Time (Same logic as Dashboard Metric)
+            total_mins = all_contribs.get(name, 0)
+            h = total_mins // 60
+            m = total_mins % 60
+            via_time_display = f"{h}h {m}m"
+            
+            # 2. Get Contribution Details (Checking Activity Logs)
+            # We filter the logs for this specific person and join their task descriptions
+            tasks = [l['task'] for l in all_logs if l['user'] == name]
+            if tasks:
+                # Show the 3 most recent tasks to keep the table clean
+                contribution_detail = " | ".join(tasks[-3:]) 
+            else:
+                contribution_detail = "No activities logged yet"
+                
+            summary_data.append({
+                "Student Name": name,
+                "Role": role,
+                "Total VIA Time": via_time_display,
+                "Recent Contributions": contribution_detail
+            })
         
-        # Display as a table
-        st.table(df_dir)
+        # Create the visual table
+        df_summary = pd.DataFrame(summary_data)
+        
+        # Search functionality so the Teacher can find specific people
+        search_query = st.text_input("🔍 Search by name...", "")
+        if search_query:
+            df_summary = df_summary[df_summary["Student Name"].str.contains(search_query, case=False)]
+            
+        # Display the data
+        st.dataframe(
+            df_summary, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Total VIA Time": st.column_config.TextColumn("⏱️ Total VIA Time"),
+                "Recent Contributions": st.column_config.TextColumn("🛠️ Contribution History")
+            }
+        )
+
+    st.success(f"Total Class Members Registered: {len(all_accounts)}")
 
 # --- TAB 5: ADMIN ---
 if is_chair:
-    with active_tab[5]:  # Changed index from 4 to 5
+    with active_tab[5]: # This must be 5 now!
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         
