@@ -124,106 +124,90 @@ c_name, c_role = st.session_state.u_name, st.session_state.u_role
 is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
 is_rep = "Representative" in c_role or any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []))
 
-# --- 6. TABS ---
-tabs_list = ["🏠 Dashboard", "✅ Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
-if is_chair: tabs_list.append("⚙️ Admin")
-active_tab = st.tabs(tabs_list)
-
+# --- SIDEBAR UI (Define this ONCE here) ---
 st.sidebar.markdown(f"### 👤 {c_name}")
 view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"])
-if st.sidebar.button("🔓 Logout"):
-    st.session_state.authenticated = False
-    st.rerun()
-
-# --- SIDEBAR UI ---
-st.sidebar.markdown(f"### 👤 {c_name}")
-# Define this BEFORE it is used in any tabs
-view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"]) 
 
 if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
 
-# --- 6. PAGE CONTENT ---
-# Now view_proj is guaranteed to exist for the tabs below
-with active_tab[0]: 
-    st.title(f"🚀 {view_proj} Project Portal")
+# --- 6. TABS DEFINITION ---
+tabs_list = ["🏠 Dashboard", "✅ Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
+if is_chair: tabs_list.append("⚙️ Admin")
+active_tab = st.tabs(tabs_list)
+
 # --- TAB 0: DASHBOARD ---
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
+    
+    # Top Metrics
     col_a, col_b, col_c = st.columns(3)
     if not is_teach:
         u_key = f"{c_name}_{view_proj}"
         m = st.session_state.data.get('contributions', {}).get(u_key, 0)
         col_a.metric(f"Your {view_proj} Hours", f"{m // 60}h {m % 60}m")
-    else: col_a.metric("Role", "Faculty Observer")
+    else: 
+        col_a.metric("Role", "Faculty Observer")
     
     events = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
     col_b.metric("Upcoming Events", len([e for e in events if e.get("status") != "Cancelled"]))
     col_c.metric("Project Status", "Active", delta="On Track")
 
-    c1, c2 = st.columns([2, 1])
+    # Main Dashboard Content
     col1, col2 = st.columns([2, 1])
     
     with col1:
         st.subheader("📅 Event RSVP")
-        events = [e for e in st.session_state.data["events"] if e["project"] == view_proj] [cite: 28]
-        
         if not events:
-            st.info("No events scheduled yet.") [cite: 28]
+            st.info("No events scheduled yet.")
         else:
             for i, e in enumerate(events):
-                is_cancelled = e.get("status") == "Cancelled" [cite: 29]
-                e_id = f"{e['project']}_{e['date']}_{e['start_time']}" [cite: 33]
+                is_cancelled = e.get("status") == "Cancelled"
+                e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
                 
                 with st.container(border=True):
                     if is_cancelled:
-                        st.error(f"🚫 **CANCELLED: {e['type']}**") [cite: 29]
+                        st.error(f"🚫 **CANCELLED: {e['type']}**")
                     else:
-                        st.write(f"**{e['type']}**") [cite: 30]
-                        st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") [cite: 31]
+                        st.write(f"**{e['type']}**")
+                        st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}")
 
-                        # --- NEW: RSVP RESPONSES VIEW ---
+                        # RSVP Status Section
                         st.markdown("---")
                         st.markdown("**Current Responses:**")
-                        
-                        # Filter RSVPs for this specific event
-                        event_responses = [r for r in st.session_state.data.get("rsvp", []) if r['event_id'] == e_id] [cite: 35]
+                        event_responses = [r for r in st.session_state.data.get("rsvp", []) if r['event_id'] == e_id]
                         
                         if not event_responses:
                             st.caption("No responses yet.")
                         else:
-                            # Create a small table or list for responses
                             for resp in event_responses:
-                                status_emoji = {
-                                    "Attending": "✅",
-                                    "Late": "⏳",
-                                    "Not Attending": "❌"
-                                }.get(resp['status'], "❓")
-                                
+                                status_emoji = {"Attending": "✅", "Late": "⏳", "Not Attending": "❌"}.get(resp['status'], "❓")
                                 st.markdown(f"{status_emoji} **{resp['name']}**: {resp['status']}")
                                 if resp.get('note'):
-                                    st.caption(f"💬 Reason: {resp['note']}") [cite: 32, 34]
+                                    st.caption(f"💬 Reason: {resp['note']}")
                         
-                        # --- EXISTING: Update My RSVP Expander ---
+                        # RSVP Update Form
                         with st.expander("Update My RSVP"):
                             form_key = f"form_rsvp_{view_proj}_{i}"
                             with st.form(key=form_key):
-                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"], key=f"status_{form_key}")
-                                r = st.text_input("Note/Reason", key=f"note_{form_key}") [cite: 32]
-                                if st.form_submit_button("Confirm RSVP", key=f"btn_{form_key}"):
+                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"], key=f"s_{form_key}")
+                                r = st.text_input("Note/Reason", key=f"n_{form_key}")
+                                if st.form_submit_button("Confirm RSVP"):
                                     if s:
-                                        new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r} [cite: 34]
+                                        new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
                                         current_rsvps = st.session_state.data.get("rsvp", [])
-                                        st.session_state.data["rsvp"] = [x for x in current_rsvps if not (x['event_id'] == e_id and x['name'] == c_name)] [cite: 35]
-                                        st.session_state.data["rsvp"].append(new_rsvp) [cite: 35]
-                                        save_data() [cite: 36]
-                                        st.rerun() [cite: 36]
+                                        # Remove old RSVP and add new one
+                                        st.session_state.data["rsvp"] = [x for x in current_rsvps if not (x['event_id'] == e_id and x['name'] == c_name)]
+                                        st.session_state.data["rsvp"].append(new_rsvp)
+                                        save_data()
+                                        st.rerun()
 
     with col2:
         st.subheader("👥 Team Roster")
         mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
-        if not mems: st.write("No members.")
+        if not mems: 
+            st.write("No members.")
         for m in mems:
             st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m['name']}**")
             st.caption(f"Focus: {m['sub_role']}")
