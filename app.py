@@ -222,7 +222,6 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
 # --- 6. PAGE CONTENT ---
 
 # --- TAB 0: DASHBOARD ---
-# --- TAB 0: DASHBOARD ---
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
     col_a, col_b, col_c = st.columns(3)
