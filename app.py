@@ -344,7 +344,6 @@ with active_tab[2]:
         df_logs = df_logs[["date", "minutes", "task"]].sort_values(by="date", ascending=False)
         st.table(df_logs)
 
-    
 # --- CONTRIBUTION TRACKER TAB ---
 with active_tab[3]:
     st.title("⏳ Time Management")
@@ -376,33 +375,32 @@ with active_tab[3]:
 # --- ADMIN TAB ---
 if c_role == "Chairman":
     with active_tab[4]:
-        # PASTE ALL YOUR MANAGEMENT CENTER CODE HERE
         st.title("⚙️ Admin Control")
-        # ...
-
-# --- MANAGEMENT CENTER ---
-elif page == "Management Center" and is_chair:
-    st.title("👑 Chairman Control")
-    t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
-    with t1:
-        with st.form("m_man"):
-            n, p = st.text_input("Name"), st.selectbox("Project", ["SKIT", "BROCHURE"])
-            r = st.checkbox("Representative")
-            s = st.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "N/A"]) if p=="SKIT" else "Designer"
-            if st.form_submit_button("Save Member"):
-                st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != n]
-                st.session_state.data["members"].append({"name": n, "project": p, "is_rep": r, "sub_role": s})
-                save_data(); st.rerun()
-    with t2:
-        with st.form("e_man"):
-            p, t, d = st.selectbox("Project", ["SKIT", "BROCHURE"]), st.selectbox("Type", ["Discussion", "Rehearsal"]), st.date_input("Date")
-            s, et, v = st.time_input("Start"), st.time_input("End"), st.text_input("Venue")
-            if st.form_submit_button("Add Event"):
-                st.session_state.data["events"].append({"project": p, "type": t, "date": d, "start_time": s, "end_time": et, "venue": v})
-                save_data(); st.rerun()
-    with t3:
-        for i, a in enumerate(st.session_state.data.get("accounts", [])):
-            c1, c2 = st.columns([4, 1])
-            c1.write(f"{a['name']} ({a['role']})")
-            if c2.button("Delete Account", key=f"da_{i}"):
-                st.session_state.data["accounts"].pop(i); save_data(); st.rerun()
+        t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
+        with t1:
+            with st.form("m_man"):
+                n = st.text_input("Name")
+                p = st.selectbox("Project", ["SKIT", "BROCHURE"])
+                r = st.checkbox("Representative")
+                s = st.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "N/A"]) if p=="SKIT" else "Designer"
+                if st.form_submit_button("Save Member"):
+                    st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != n]
+                    st.session_state.data["members"].append({"name": n, "project": p, "is_rep": r, "sub_role": s})
+                    save_data(); st.rerun()
+        with t2:
+            with st.form("e_man"):
+                p = st.selectbox("Project", ["SKIT", "BROCHURE"])
+                t = st.selectbox("Type", ["Discussion", "Rehearsal"])
+                d = st.date_input("Date")
+                s = st.time_input("Start")
+                et = st.time_input("End")
+                v = st.text_input("Venue")
+                if st.form_submit_button("Add Event"):
+                    st.session_state.data["events"].append({"project": p, "type": t, "date": d, "start_time": s, "end_time": et, "venue": v})
+                    save_data(); st.rerun()
+        with t3:
+            for i, a in enumerate(st.session_state.data.get("accounts", [])):
+                c1, c2 = st.columns([4, 1])
+                c1.write(f"{a['name']} ({a['role']})")
+                if c2.button("Delete Account", key=f"da_{i}"):
+                    st.session_state.data["accounts"].pop(i); save_data(); st.rerun()
