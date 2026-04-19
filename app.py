@@ -380,24 +380,88 @@ with active_tab[2]:
 
 # --- TAB 3: PROGRESS ---
 with active_tab[3]:
-    st.title("📊 Progress Tracker")
-    is_broch_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "BROCHURE")
+    st.title("📊 Class Progress Tracker")
     
-    if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
-        with st.form(key=f"manual_time_add_{view_proj}"):
-            st.subheader("Add Extra Contribution")
-            target = st.selectbox("Member", [m['name'] for m in members] if members else ["No Members Found"])
-            h = st.number_input("Hours", min_value=0)
-            if st.form_submit_button("Add Time"):
-                if target != "No Members Found":
-                    st.session_state.data["contributions"][target] = st.session_state.data["contributions"].get(target, 0) + (h*60)
-                    save_data(); st.success(f"Added hours to {target}"); st.rerun()
+    # 1. SUMMARY METRICS
+    all_members = st.session_state.data.get("members", [])
+    all_contribs = st.session_state.data.get("contributions", {})
+    
+    total_class_mins = sum(all_contribs.values())
+    st.metric("Total Class VIA Minutes", f"{total_class_mins} mins")
+    
+    st.divider()
 
-    sum_list = [{"Name": m["name"], "Total": f"{all_contribs.get(m['name'], 0)//60}h {all_contribs.get(m['name'], 0)%60}m"} for m in members]
-    if sum_list:
-        st.table(pd.DataFrame(sum_list))
+    # 2. ADJUSTMENT SECTION (Chairman/Rep Only)
+    if is_chair or is_rep:
+        st.subheader("⚙️ Time Adjustments")
+        col_add, col_sub = st.columns(2)
+        
+        # --- ADD TIME ---
+        with col_add:
+            with st.expander("➕ Add Bonus Time"):
+                with st.form("add_time_form"):
+                    target_user = st.selectbox("Select Student", [m['name'] for m in all_members], key="add_user")
+                    bonus_mins = st.number_input("Minutes to Add", min_value=1, step=5)
+                    reason_add = st.text_input("Reason")
+                    if st.form_submit_button("Apply Bonus"):
+                        st.session_state.data["contributions"][target_user] = st.session_state.data["contributions"].get(target_user, 0) + bonus_mins
+                        # Log it so it shows in history
+                        st.session_state.data["logs"].append({
+                            "log_id": f"bonus_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                            "user": target_user,
+                            "date": str(date.today()),
+                            "minutes": bonus_mins,
+                            "task": f"BONUS: {reason_add}",
+                            "project": "SYSTEM",
+                            "comments": []
+                        })
+                        save_data(); st.success(f"Added {bonus_mins}m to {target_user}"); st.rerun()
+
+        # --- DEDUCT TIME (New Feature) ---
+        with col_sub:
+            with st.expander("➖ Deduct Time"):
+                with st.form("deduct_time_form"):
+                    deduct_user = st.selectbox("Select Student", [m['name'] for m in all_members], key="sub_user")
+                    penalty_mins = st.number_input("Minutes to Deduct", min_value=1, step=5)
+                    reason_sub = st.text_input("Reason (Required)")
+                    
+                    if st.form_submit_button("Apply Deduction"):
+                        if not reason_sub:
+                            st.error("Please provide a reason for the deduction.")
+                        else:
+                            current_time = st.session_state.data["contributions"].get(deduct_user, 0)
+                            # Apply deduction (ensure time doesn't go below 0)
+                            st.session_state.data["contributions"][deduct_user] = max(0, current_time - penalty_mins)
+                            
+                            # Log the deduction
+                            st.session_state.data["logs"].append({
+                                "log_id": f"deduct_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                                "user": deduct_user,
+                                "date": str(date.today()),
+                                "minutes": -penalty_mins, # Negative value for tracking
+                                "task": f"🛑 DEDUCTION: {reason_sub}",
+                                "project": "SYSTEM",
+                                "comments": []
+                            })
+                            save_data(); st.warning(f"Deducted {penalty_mins}m from {deduct_user}"); st.rerun()
+
+    st.divider()
+    
+    # 3. VISUAL PROGRESS BAR
+    st.subheader("Individual Progress")
+    if not all_members:
+        st.info("Add members in Admin to see progress.")
     else:
-        st.info("No member data available.")
+        for m in all_members:
+            m_name = m['name']
+            m_mins = all_contribs.get(m_name, 0)
+            
+            # Formatting for display
+            progress_val = min(1.0, m_mins / 300) # Assuming 300 mins (5 hours) is the goal
+            
+            col_name, col_bar = st.columns([1, 3])
+            col_name.write(f"**{m_name}**")
+            col_bar.progress(progress_val, text=f"{m_mins // 60}h {m_mins % 60}m")
 
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
