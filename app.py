@@ -12,24 +12,22 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 # --- 2. FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
     try:
-        # Handle Credentials
+        # Load your credentials
         if "firebase" in st.secrets:
             cred = credentials.Certificate(dict(st.secrets["firebase"]))
         else:
             cred = credentials.Certificate("serviceAccountKey.json")
             
-        # STEP 1: Define the URL clearly
-        # Make sure this link is YOURS from the Firebase Console
-        URL = "https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-        
-        # STEP 2: Initialize
+        # DIRECT INITIALIZATION - No variables, no secrets for the URL
         firebase_admin.initialize_app(cred, {
-            'databaseURL': URL  # <-- The 'URL' must match the variable above
+            'databaseURL': 'https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/' 
         })
+        # ^^^ MAKE SURE the link above starts with https:// and ends with /
+        
     except Exception as e:
         st.error(f"Firebase Setup Error: {e}")
         st.stop()
-        
+    
 # --- 3. DATA PERSISTENCE (REALTIME DB) ---
 def load_data():
     try:
