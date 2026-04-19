@@ -292,86 +292,33 @@ with active_tab[0]:
             
 # --- TAB 1: ATTENDANCE ---
 with active_tab[1]:
-    st.title("✅ Event Attendance")
-    
-    # Filter events for the project currently being viewed
-    evs = [e for e in st.session_state.data.get("events", []) if e.get("project") == view_proj]
-    
-    if not evs:
-        st.info(f"No upcoming events scheduled for {view_proj}.")
-    else:
-        # 1. Select the event to RSVP for
-        event_options = [f"{e['type']} ({e['date']})" for e in evs]
-        selected_event_str = st.selectbox("Select Event to RSVP/Check", event_options)
+    st.title("✅ Attendance Tracker")
+    evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
+    if evs:
+        sel = st.selectbox("Select Event", [f"{e['type']} ({e['date']})" for e in evs])
+        idx = [f"{e['type']} ({e['date']})" for e in evs].index(sel)
+        e = evs[idx]
+        e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+        voters = [rv['name'] for rv in st.session_state.data.get("rsvp", []) if rv['event_id']==e_id and rv['status'] in ["Attending", "Late"]]
         
-        # Find the specific event object
-        event_idx = event_options.index(selected_event_str)
-        selected_event = evs[event_idx]
-        
-        # Safely get venue and time to avoid KeyErrors
-        e_venue = selected_event.get('venue', 'TBC')
-        e_time = selected_event.get('start_time', 'N/A')
-        
-        st.write(f"**Location:** 📍 {e_venue} | **Time:** ⏰ {e_time}")
+        if not voters:
+            st.warning("No one has RSVP'd 'Attending' for this event yet.")
+        else:
+            for n in voters:
+                rec = st.session_state.data["attendance"].get(e_id, {}).get(n, {"p": False, "d": "Full"})
+                c1, c2, c3 = st.columns(3)
+                c1.write(n)
+                if is_chair or is_teach:
+                    p = c2.checkbox("Present", value=rec["p"], key=f"p_{n}_{e_id}")
+                    d = c3.selectbox("Session", ["Full", "Half"], index=0 if rec["d"]=="Full" else 1, key=f"d_{n}_{e_id}")
+                    if e_id not in st.session_state.data["attendance"]: st.session_state.data["attendance"][e_id] = {}
+                    st.session_state.data["attendance"][e_id][n] = {"p": p, "d": d}
+                else:
+                    c2.write("✅" if rec["p"] else "❌")
+                    c3.write(rec["d"])
+            if (is_chair or is_teach) and st.button("Save Attendance"): 
+                save_data(); st.success("Saved!")
 
-        # --- STUDENT SECTION: SUBMIT ATTENDANCE INTENT ---
-        if c_role != "Teacher":
-            st.subheader("Your RSVP")
-            
-            # Create a unique key for this user's RSVP to this specific event
-            # Logic: rsvp_EventName_Date_UserName
-            rsvp_key = f"rsvp_{selected_event['type']}_{selected_event['date']}_{c_name}"
-            
-            # Get current status if they already submitted
-            current_rsvp = st.session_state.data.get("rsvp_records", {}).get(rsvp_key, "Not Submitted")
-            
-            st.write(f"Your current status: **{current_rsvp}**")
-            
-            col1, col2 = st.columns(2)
-            if col1.button("🙋 I'm Attending", use_container_width=True):
-                if "rsvp_records" not in st.session_state.data:
-                    st.session_state.data["rsvp_records"] = {}
-                st.session_state.data["rsvp_records"][rsvp_key] = "Attending"
-                save_data()
-                st.success("RSVP updated to Attending!")
-                st.rerun()
-                
-            if col2.button("🙅 Cannot Attend", use_container_width=True):
-                if "rsvp_records" not in st.session_state.data:
-                    st.session_state.data["rsvp_records"] = {}
-                st.session_state.data["rsvp_records"][rsvp_key] = "Not Attending"
-                save_data()
-                st.warning("RSVP updated to Not Attending.")
-                st.rerun()
-
-        st.divider()
-
-        # --- CHAIRMAN/TEACHER SECTION: VIEW LIST ---
-        if is_chair or is_teach:
-            st.subheader("📋 Attendance Overview")
-            
-            # Logic to show who said they are coming
-            all_rsvps = st.session_state.data.get("rsvp_records", {})
-            event_prefix = f"rsvp_{selected_event['type']}_{selected_event['date']}_"
-            
-            coming = []
-            not_coming = []
-            
-            for key, status in all_rsvps.items():
-                if key.startswith(event_prefix):
-                    name = key.replace(event_prefix, "")
-                    if status == "Attending":
-                        coming.append(name)
-                    else:
-                        not_coming.append(name)
-            
-            c1, c2 = st.columns(2)
-            c1.write(f"**Attending ({len(coming)}):**")
-            for p in coming: c1.write(f"- {p}")
-            
-            c2.write(f"**Not Attending ({len(not_coming)}):**")
-            for p in not_coming: c2.write(f"- {p}")
-                
 # --- TAB 2: ACTIVITY LOG ---
 with active_tab[2]:
     st.title("🕒 Activity Log")
