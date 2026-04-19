@@ -318,6 +318,129 @@ if is_chair:
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         
+        # --- 6. PAGE CONTENT ---
+
+# --- TAB 0: DASHBOARD ---
+with active_tab[0]: 
+    st.title(f"🚀 {view_proj} Project Portal")
+    
+    col_a, col_b, col_c = st.columns(3)
+    all_contribs = st.session_state.data.get('contributions', {})
+    user_minutes = all_contribs.get(c_name, 0)
+    
+    all_events = st.session_state.data.get("events", [])
+    upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
+    
+    col_a.metric("Your VIA Hours", f"{user_minutes // 60}h")
+    col_b.metric("Upcoming Events", upcoming_events)
+    col_c.metric("Project Status", "Active", delta="On Track")
+
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.subheader("📅 Event RSVP")
+        events = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
+        
+        if not events:
+            st.info("No events scheduled yet.")
+        else:
+            for i, e in enumerate(events):
+                is_cancelled = e.get("status") == "Cancelled"
+                with st.container(border=True):
+                    if is_cancelled:
+                        st.error(f"🚫 **CANCELLED: {e['type']}**")
+                        if e.get("note"): st.warning(f"**Reason:** {e['note']}")
+                    else:
+                        st.write(f"**{e['type']}**")
+                    
+                    st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
+
+                    if not is_cancelled:
+                        with st.expander("Update My RSVP"):
+                            with st.form(f"rsvp_form_{i}"):
+                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
+                                r = st.text_input("Note/Reason")
+                                if st.form_submit_button("Confirm RSVP"):
+                                    e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+                                    new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
+                                    st.session_state.data["rsvp"] = [x for x in st.session_state.data.get("rsvp", []) if not (x['event_id'] == e_id and x['name'] == c_name)]
+                                    st.session_state.data["rsvp"].append(new_rsvp)
+                                    save_data(); st.success("RSVP Saved!"); st.rerun()
+                    else:
+                        st.info("RSVP disabled for cancelled event.")
+
+    with col2:
+        st.subheader("👥 Team Roster")
+        members = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
+        for m in members:
+            st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m['name']}**")
+            st.caption(f"Focus: {m['sub_role']}")
+
+# --- TAB 1: ATTENDANCE ---
+with active_tab[1]:
+    st.title("✅ Attendance Tracker")
+    evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
+    if evs:
+        sel = st.selectbox("Select Event", [f"{e['type']} ({e['date']})" for e in evs])
+        idx = [f"{e['type']} ({e['date']})" for e in evs].index(sel)
+        e = evs[idx]
+        e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+        voters = [rv['name'] for rv in st.session_state.data.get("rsvp", []) if rv['event_id']==e_id and rv['status'] in ["Attending", "Late"]]
+        
+        if not voters:
+            st.warning("No one has RSVP'd 'Attending' for this event yet.")
+        else:
+            for n in voters:
+                rec = st.session_state.data["attendance"].get(e_id, {}).get(n, {"p": False, "d": "Full"})
+                c1, c2, c3 = st.columns(3)
+                c1.write(n)
+                if is_chair or is_teach:
+                    p = c2.checkbox("Present", value=rec["p"], key=f"p_{n}_{e_id}")
+                    d = c3.selectbox("Session", ["Full", "Half"], index=0 if rec["d"]=="Full" else 1, key=f"d_{n}_{e_id}")
+                    if e_id not in st.session_state.data["attendance"]: st.session_state.data["attendance"][e_id] = {}
+                    st.session_state.data["attendance"][e_id][n] = {"p": p, "d": d}
+                else:
+                    c2.write("✅" if rec["p"] else "❌")
+                    c3.write(rec["d"])
+            if (is_chair or is_teach) and st.button("Save Attendance"): 
+                save_data(); st.success("Saved!")
+
+# --- TAB 2: ACTIVITY LOG ---
+with active_tab[2]:
+    st.title("🕒 Activity Log")
+    with st.expander("➕ Log New Activity"):
+        with st.form("log_form"):
+            ld = st.date_input("Date", value=date.today())
+            lm = st.number_input("Minutes", min_value=5, step=5)
+            lt = st.text_input("Task Description")
+            lp = st.selectbox("Project", ["SKIT", "BROCHURE"])
+            if st.form_submit_button("Submit Log"):
+                st.session_state.data["logs"].append({"user": c_name, "date": str(ld), "minutes": lm, "task": lt, "project": lp})
+                all_contribs[c_name] = all_contribs.get(c_name, 0) + lm
+                save_data(); st.rerun()
+
+# --- TAB 3: PROGRESS ---
+with active_tab[3]:
+    st.title("📊 Progress Tracker")
+    is_broch_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "BROCHURE")
+    
+    if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
+        with st.form(key=f"time_add_{view_proj}"):
+            st.subheader("Add Extra Contribution")
+            target = st.selectbox("Member", [m['name'] for m in members])
+            h = st.number_input("Hours", min_value=0)
+            if st.form_submit_button("Add Time"):
+                st.session_state.data["contributions"][target] = st.session_state.data["contributions"].get(target, 0) + (h*60)
+                save_data(); st.rerun()
+
+    sum_list = [{"Name": m["name"], "Total": f"{all_contribs.get(m['name'], 0)//60}h"} for m in members]
+    st.table(pd.DataFrame(sum_list))
+
+# --- TAB 4: ADMIN ---
+if is_chair:
+    with active_tab[4]:
+        st.title("⚙️ Admin Control")
+        t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         with t1:
             st.subheader("Manage Roster")
             col_skit, col_broch = st.columns(2)
