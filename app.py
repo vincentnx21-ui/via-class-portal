@@ -195,14 +195,14 @@ if not st.session_state.authenticated:
                 st.error("Please enter your name.")
     st.stop()
 
-# --- 5. NAVIGATION (The Tab Menu) ---
+# --- 5. NAVIGATION & PERMISSIONS ---
 c_name = st.session_state.u_name
 c_role = st.session_state.u_role
 
-# ADD THESE LINES HERE to fix the NameError
+# Define these clearly so all tabs can see them
 is_chair = (c_role == "Chairman")
 is_teach = (c_role == "Teacher")
-# Check if they are a representative (adjust 'is_rep' to match your data key)
+is_rep   = "Representative" in c_role  # <--- THIS IS THE MISSING LINE
 is_skit_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "SKIT")
 
 # Define tabs
