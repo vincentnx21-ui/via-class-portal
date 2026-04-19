@@ -20,8 +20,10 @@ if not firebase_admin._apps:
             
         # DIRECT INITIALIZATION - No variables, no secrets for the URL
         firebase_admin.initialize_app(cred, {
-            'databaseURL': 'https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/' 
-        })
+    # It's okay if it ends in .app/ 
+    # Just make sure it is the link from the Realtime Database page!
+    'databaseURL': 'https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/'
+})
         # ^^^ MAKE SURE the link above starts with https:// and ends with /
         
     except Exception as e:
