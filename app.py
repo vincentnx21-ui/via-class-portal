@@ -398,6 +398,34 @@ if c_role == "Chairman":
                 if st.form_submit_button("Add Event"):
                     st.session_state.data["events"].append({"project": p, "type": t, "date": d, "start_time": s, "end_time": et, "venue": v})
                     save_data(); st.rerun()
+                    
+            st.divider()
+        st.subheader("🗑️ Cancel / Delete Events")
+        
+        # Get all current events
+        all_evs = st.session_state.data.get("events", [])
+        
+        if not all_evs:
+            st.write("No events scheduled.")
+        else:
+            for i, ev in enumerate(all_evs):
+                col1, col2 = st.columns([4, 1])
+                # Show event details
+                col1.write(f"**{ev['type']}** - {ev['date']} ({ev['project']})")
+                
+                # The "Cancel" Button
+                if col2.button("Cancel Event", key=f"del_ev_{i}", type="secondary"):
+                    # Remove the event from the list
+                    st.session_state.data["events"].pop(i)
+                    
+                    # Optional: Also remove any RSVPs or Attendance linked to this event
+                    # e_id = f"{ev['project']}_{ev['date']}_{ev['start_time']}"
+                    # st.session_state.data["rsvp"] = [r for r in st.session_state.data["rsvp"] if r['event_id'] != e_id]
+                    
+                    save_data()
+                    st.success(f"Event '{ev['type']}' has been cancelled.")
+                    st.rerun()
+                    
         with t3:
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
                 c1, c2 = st.columns([4, 1])
