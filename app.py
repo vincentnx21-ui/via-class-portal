@@ -497,11 +497,29 @@ if is_chair:
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
         
         with t1:
-            st.subheader("➕ Add New Member")
-            with st.form(key="admin_add_member_form", clear_on_submit=True):
-                col_n, col_p = st.columns(2)
-                n = col_n.text_input("Name").strip().title()
-                p = col_p.selectbox("Project", ["SKIT", "BROCHURE"])
+    st.subheader("➕ Add Official Member")
+    with st.form(key="admin_roster_entry_form", clear_on_submit=True):
+        col_n, col_p = st.columns(2)
+        n = col_n.text_input("Full Name").strip().title()
+        p = col_p.selectbox("Assign Project", ["SKIT", "BROCHURE"])
+        
+        col_r, col_s = st.columns(2)
+        r = col_r.checkbox("Is Representative?") "BROCHURE"])
+
+        s = col_s.selectbox(
+            "Specific Role", 
+            ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"],
+            index=3 
+        )
+        
+        if st.form_submit_button("Add to Roster"):
+            if n:
+                st.session_state.data["members"].append({
+                    "name": n, "project": p, "is_rep": r, "sub_role": s
+                })
+                save_data()
+                st.success(f"✅ {n} added as {s}!")
+                st.rerun()
                 
                 col_r, col_s = st.columns(2)
                 r = col_r.checkbox("Representative?")
