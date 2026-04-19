@@ -401,64 +401,82 @@ with active_tab[3]:
 
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
-    st.title("📁 Official Class Roster & VIA Summary")
-    st.info("This list only includes members officially added to the project roster by the Chairman.")
+    st.title("📁 Official Class Directory")
     
-    # Switch data source to 'members' instead of 'accounts'
+    # 1. TOP LEVEL STATS (Quick Overview for Teacher)
     all_members = st.session_state.data.get("members", [])
     all_contribs = st.session_state.data.get("contributions", {})
     all_logs = st.session_state.data.get("logs", [])
     
+    m_col1, m_col2, m_col3 = st.columns(3)
+    total_h = sum(all_contribs.values()) // 60
+    m_col1.metric("Total Members", len(all_members))
+    m_col2.metric("Total Class Hours", f"{total_h}h")
+    m_col3.metric("Active Projects", "2") # Skit & Brochure
+    
+    st.divider()
+
     if not all_members:
-        st.warning("The roster is currently empty. Please add members in the Admin tab.")
+        st.warning("The roster is empty. Add members in the Admin tab to see them here.")
     else:
+        # 2. DATA PROCESSING
         summary_data = []
-        
         for m in all_members:
             name = m['name']
-            project = m['project']
-            role_in_project = m.get('sub_role', 'Member')
             
-            # 1. Get VIA Time for this specific member
-            total_mins = all_contribs.get(name, 0)
-            h = total_mins // 60
-            mins = total_mins % 60
-            via_time_display = f"{h}h {mins}m"
+            # Time calculation
+            t_mins = all_contribs.get(name, 0)
+            time_fmt = f"{t_mins // 60}h {t_mins % 60}m"
             
-            # 2. Get Contribution Details from logs
-            tasks = [log['task'] for log in all_logs if log['user'] == name]
-            if tasks:
-                contribution_detail = " | ".join(tasks[-3:]) 
-            else:
-                contribution_detail = "No activities logged yet"
-                
+            # Clean up task history
+            u_tasks = [l['task'] for l in all_logs if l['user'] == name]
+            recent = " | ".join(u_tasks[-2:]) if u_tasks else "No activity yet"
+            
             summary_data.append({
-                "Student Name": name,
-                "Project": project,
-                "Role": role_in_project,
-                "Total VIA Time": via_time_display,
-                "Recent Contributions": contribution_detail
+                "NAME": name,
+                "PROJECT": m['project'],
+                "ROLE": m.get('sub_role', 'Member'),
+                "VIA TIME": time_fmt,
+                "LATEST TASKS": recent,
+                "STATUS": "✅ Active" if u_tasks else "⏳ No Logs"
             })
         
-        # Create the DataFrame
-        df_summary = pd.DataFrame(summary_data)
-        
-        # Add a filter for Project to make it easier for teachers
-        proj_filter = st.radio("Filter by Project", ["All", "SKIT", "BROCHURE"], horizontal=True)
-        if proj_filter != "All":
-            df_summary = df_summary[df_summary["Project"] == proj_filter]
+        df = pd.DataFrame(summary_data)
 
-        # Display the data
+        # 3. SEARCH & FILTER BAR
+        f1, f2 = st.columns([2, 1])
+        search = f1.text_input("🔍 Search Classmate", placeholder="Type a name...")
+        p_filter = f2.selectbox("Filter Project", ["All Projects", "SKIT", "BROCHURE"])
+
+        if search:
+            df = df[df["NAME"].str.contains(search, case=False)]
+        if p_filter != "All Projects":
+            df = df[df["PROJECT"] == p_filter]
+
+        # 4. ENHANCED DATAFRAME DISPLAY
         st.dataframe(
-            df_summary, 
-            use_container_width=True, 
+            df,
+            use_container_width=True,
             hide_index=True,
             column_config={
-                "Total VIA Time": st.column_config.TextColumn("⏱️ Hours"),
-                "Recent Contributions": st.column_config.TextColumn("🛠️ Activity Summary")
+                "NAME": st.column_config.TextColumn("👤 Name", help="Official roster name"),
+                "PROJECT": st.column_config.TextColumn("📁 Project"),
+                "ROLE": st.column_config.TextColumn("🎭 Role"),
+                "VIA TIME": st.column_config.TextColumn("⏱️ Total Time"),
+                "LATEST TASKS": st.column_config.TextColumn("📝 Latest Work"),
+                "STATUS": st.column_config.TextColumn("📌 Status")
             }
         )
-    
+
+        # 5. DOWNLOAD OPTION (Useful for Teachers/Reports)
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Directory as CSV",
+            data=csv,
+            file_name=f"VIA_Directory_{date.today()}.csv",
+            mime='text/csv',
+        )
+        
 # --- TAB 5: ADMIN ---
 if is_chair:
     with active_tab[5]: # This must be 5 now!
