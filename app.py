@@ -53,8 +53,9 @@ def load_data():
     try:
         ref = db.reference("via_master_record")
         data = ref.get()
+        
         if data:
-            # Convert date/time strings back to Python objects
+            # (Keep your existing date/time conversion code here...)
             if "events" in data:
                 for e in data["events"]:
                     try:
@@ -63,13 +64,26 @@ def load_data():
                         e["end_time"] = datetime.strptime(e["end_time"], "%H:%M").time()
                     except: continue
             return data
+            
         else:
-            # First time setup
-            return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}}
+            # --- PASTE THE CODE HERE ---
+            # This ensures even a brand new database has all the "drawers" ready
+            return {
+                "members": [], 
+                "accounts": [], 
+                "logs": [], 
+                "contributions": {}, 
+                "events": [], 
+                "rsvp": [], 
+                "attendance": {}
+            }
+            # ---------------------------
+
     except Exception as e:
         st.error(f"Load Error: {e}")
+        # Also return the empty structure here so the app doesn't crash on error
         return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}}
-
+        
 def save_data():
     try:
         ref = db.reference("via_master_record")
