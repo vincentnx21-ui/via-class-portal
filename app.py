@@ -305,7 +305,9 @@ with active_tab[4]:
 if is_chair:
     with active_tab[5]:
         st.title("⚙️ Chairman Master Control")
-        at1, at2, at3, at4 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections"])
+        # Update: Added "⚠️ Reset" to the tab list
+        at1, at2, at3, at4, at5 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections", "⚠️ Reset"])
+        
         with at1:
             with st.form("add_m"):
                 cn, cp = st.columns(2)
@@ -345,3 +347,21 @@ if is_chair:
                     st.session_state.data["contributions"][ukey] = st.session_state.data["contributions"].get(ukey, 0) + am
                     st.session_state.data["logs"].append({"log_id": f"adm_{datetime.now().strftime('%H%M%S')}", "user": an, "date": str(date.today()), "minutes": am, "task": f"ADMIN ADJ: {ar}", "project": ap})
                     save_data(); st.success(f"Adjusted {an}!"); st.rerun()
+
+        # --- NEW RESET LOGIC ---
+        with at5:
+            st.subheader("🚨 Danger Zone")
+            st.warning("This will permanently wipe all hour contributions and the activity log history.")
+            
+            # Confirmation step to prevent accidental clicks
+            confirm = st.text_input("Type 'RESET' to confirm deletion")
+            
+            if st.button("🔥 Reset All Time Tracker Data", type="primary"):
+                if confirm == "RESET":
+                    st.session_state.data["contributions"] = {}
+                    st.session_state.data["logs"] = []
+                    save_data()
+                    st.success("All data has been reset!")
+                    st.rerun()
+                else:
+                    st.error("You must type 'RESET' to confirm.")
