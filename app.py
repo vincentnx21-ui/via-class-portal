@@ -12,18 +12,19 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 # --- 2. FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
     try:
-        # 1. Handle Credentials
+        # Handle Credentials
         if "firebase" in st.secrets:
-            cred_info = dict(st.secrets["firebase"])
-            cred = credentials.Certificate(cred_info)
+            cred = credentials.Certificate(dict(st.secrets["firebase"]))
         else:
             cred = credentials.Certificate("serviceAccountKey.json")
             
-        # 2. Hardcode the URL directly here to stop the "None" error
-        my_url = "https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/" # <-- REPLACE THIS WITH YOUR LINK
+        # STEP 1: Define the URL clearly
+        # Make sure this link is YOURS from the Firebase Console
+        URL = "https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/" 
         
+        # STEP 2: Initialize
         firebase_admin.initialize_app(cred, {
-            'databaseURL': my_url
+            'databaseURL': URL  # <-- The 'URL' must match the variable above
         })
     except Exception as e:
         st.error(f"Firebase Setup Error: {e}")
