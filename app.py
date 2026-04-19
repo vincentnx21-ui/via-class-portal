@@ -196,33 +196,21 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
     
 # --- 6. PAGE CONTENT ---
 
-# Instead of: if page == "Dashboard":
+# --- TAB 0: DASHBOARD ---
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
     
-    # --- QUICK STATS ---
     col_a, col_b, col_c = st.columns(3)
-    
-    # SAFE CALCULATION: This prevents the KeyError
-    # It looks for 'contributions'. If missing, it uses an empty dictionary {}
     all_contribs = st.session_state.data.get('contributions', {})
-    
-    # Now we get the specific user's minutes. If they aren't there, use 0.
     user_minutes = all_contribs.get(c_name, 0)
-    total_hours = user_minutes // 60
     
-    # Safe check for events too
     all_events = st.session_state.data.get("events", [])
     upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
     
-    with col_a:
-        st.metric("Your VIA Hours", f"{total_hours}h")
-    with col_b:
-        st.metric("Upcoming Events", upcoming_events)
-    with col_c:
-        st.metric("Project Status", "Active", delta="On Track")
+    col_a.metric("Your VIA Hours", f"{user_minutes // 60}h")
+    col_b.metric("Upcoming Events", upcoming_events)
+    col_c.metric("Project Status", "Active", delta="On Track")
 
-    # --- MAIN CONTENT ---
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -233,341 +221,144 @@ with active_tab[0]:
             st.info("No events scheduled yet.")
         else:
             for i, e in enumerate(events):
-                # CHECK STATUS
                 is_cancelled = e.get("status") == "Cancelled"
-                
                 with st.container(border=True):
-                    # Show a Red Title if cancelled
                     if is_cancelled:
                         st.error(f"🚫 **CANCELLED: {e['type']}**")
-                        if e.get("note"):
-                            st.warning(f"**Reason:** {e['note']}")
+                        if e.get("note"): st.warning(f"**Reason:** {e['note']}")
                     else:
                         st.write(f"**{e['type']}**")
                     
                     st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
 
-                    # Only show RSVP form if NOT cancelled
-                    # --- 1. Find this loop in your Dashboard (Tab 0) ---
-            if not is_cancelled:
-                with st.expander("Update My RSVP"):
-                    with st.form(f"rsvp_form_{i}"):
-                        s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
-                        r = st.text_input("Note/Reason")
-                        
-                        if st.form_submit_button("Confirm RSVP"):
-                            # --- START RSVP LOGIC ---
-                            e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
-                            
-                            # Prepare the user's RSVP entry
-                            new_rsvp = {
-                                "event_id": e_id,
-                                "name": c_name,
-                                "status": s,
-                                "note": r,
-                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                            }
-            
-                            # Ensure rsvp list exists
-                            if "rsvp" not in st.session_state.data:
-                                st.session_state.data["rsvp"] = []
-            
-                            # Remove previous RSVP from this user for this specific event (if any)
-                            st.session_state.data["rsvp"] = [
-                                x for x in st.session_state.data["rsvp"] 
-                                if not (x['event_id'] == e_id and x['name'] == c_name)
-                            ]
-            
-                            # Add the new RSVP
-                            st.session_state.data["rsvp"].append(new_rsvp)
-                            
-                            save_data()
-                            st.success(f"RSVP recorded as {s}!")
-                            st.rerun()
-                            # --- END RSVP LOGIC ---
+                    if not is_cancelled:
+                        with st.expander("Update My RSVP"):
+                            with st.form(f"rsvp_form_{i}"):
+                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
+                                r = st.text_input("Note/Reason")
+                                if st.form_submit_button("Confirm RSVP"):
+                                    e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+                                    new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
+                                    st.session_state.data["rsvp"] = [x for x in st.session_state.data.get("rsvp", []) if not (x['event_id'] == e_id and x['name'] == c_name)]
+                                    st.session_state.data["rsvp"].append(new_rsvp)
+                                    save_data(); st.success("RSVP Saved!"); st.rerun()
+                    else:
+                        st.info("RSVP disabled for cancelled event.")
 
     with col2:
         st.subheader("👥 Team Roster")
         members = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
         for m in members:
-            role_icon = "⭐" if m['is_rep'] else "👤"
-            st.markdown(f"{role_icon} **{m['name']}**")
+            st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m['name']}**")
             st.caption(f"Focus: {m['sub_role']}")
-    st.title(f"🚀 {view_proj} Dashboard")
-    # ... (the stat cards, the RSVP form, etc.)
 
-
-# Instead of: elif page == "Attendance":
+# --- TAB 1: ATTENDANCE ---
 with active_tab[1]:
-    st.title("✅ Attendance")
+    st.title("✅ Attendance Tracker")
     evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
     if evs:
         sel = st.selectbox("Select Event", [f"{e['type']} ({e['date']})" for e in evs])
-        e = evs[[f"{e['type']} ({e['date']})" for e in evs].index(sel)]
+        idx = [f"{e['type']} ({e['date']})" for e in evs].index(sel)
+        e = evs[idx]
         e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
-        voters = [rv['name'] for rv in st.session_state.data["rsvp"] if rv['event_id']==e_id and rv['status'] in ["Attending", "Late"]]
-        can_mark = is_chair or is_teach or (is_skit_rep and view_proj=="SKIT")
+        voters = [rv['name'] for rv in st.session_state.data.get("rsvp", []) if rv['event_id']==e_id and rv['status'] in ["Attending", "Late"]]
         
-        for n in voters:
-            rec = st.session_state.data["attendance"].get(e_id, {}).get(n, {"p": False, "d": "Full"})
-            c1, c2, c3 = st.columns(3)
-            c1.write(n)
-            if can_mark:
-                p = c2.checkbox("Present", value=rec["p"], key=f"p_{n}_{e_id}")
-                d = c3.selectbox("Session", ["Full", "Half"], index=0 if rec["d"]=="Full" else 1, key=f"d_{n}_{e_id}")
-                if e_id not in st.session_state.data["attendance"]: st.session_state.data["attendance"][e_id] = {}
-                st.session_state.data["attendance"][e_id][n] = {"p": p, "d": d}
-            else:
-                c2.write("✅" if rec["p"] else "❌")
-                c3.write(rec["d"])
-        if can_mark and st.button("Save Attendance"): save_data(); st.success("Updated in Database")
-    st.title("📝 Attendance Tracker")
-    # ...
+        if not voters:
+            st.warning("No one has RSVP'd 'Attending' for this event yet.")
+        else:
+            for n in voters:
+                rec = st.session_state.data["attendance"].get(e_id, {}).get(n, {"p": False, "d": "Full"})
+                c1, c2, c3 = st.columns(3)
+                c1.write(n)
+                if is_chair or is_teach:
+                    p = c2.checkbox("Present", value=rec["p"], key=f"p_{n}_{e_id}")
+                    d = c3.selectbox("Session", ["Full", "Half"], index=0 if rec["d"]=="Full" else 1, key=f"d_{n}_{e_id}")
+                    if e_id not in st.session_state.data["attendance"]: st.session_state.data["attendance"][e_id] = {}
+                    st.session_state.data["attendance"][e_id][n] = {"p": p, "d": d}
+                else:
+                    c2.write("✅" if rec["p"] else "❌")
+                    c3.write(rec["d"])
+            if (is_chair or is_teach) and st.button("Save Attendance"): 
+                save_data(); st.success("Saved!")
 
-# Instead of: elif page == "Activity Log":
+# --- TAB 2: ACTIVITY LOG ---
 with active_tab[2]:
     st.title("🕒 Activity Log")
-    st.info("Submit your hours here. The Chairman will verify these for VIA records.")
-
-    # 1. FORM TO SUBMIT NEW LOG
-    with st.expander("➕ Log New Activity", expanded=True):
-        with st.form("log_form", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                log_date = st.date_input("Date of Activity", value=date.today())
-                log_hours = st.number_input("Minutes spent", min_value=5, step=5, help="Enter total minutes")
-            with col2:
-                log_task = st.text_input("What did you do?", placeholder="e.g. Painted the backdrop")
-                log_proj = st.selectbox("Project", ["SKIT", "BROCHURE"])
-            
+    with st.expander("➕ Log New Activity"):
+        with st.form("log_form"):
+            ld = st.date_input("Date", value=date.today())
+            lm = st.number_input("Minutes", min_value=5, step=5)
+            lt = st.text_input("Task Description")
+            lp = st.selectbox("Project", ["SKIT", "BROCHURE"])
             if st.form_submit_button("Submit Log"):
-                new_entry = {
-                    "user": c_name,
-                    "date": str(log_date),
-                    "minutes": log_hours,
-                    "task": log_task,
-                    "project": log_proj,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                }
-                
-                # Save to st.session_state
-                if "logs" not in st.session_state.data:
-                    st.session_state.data["logs"] = []
-                st.session_state.data["logs"].append(new_entry)
-                
-                # Update total contributions
-                contribs = st.session_state.data.get("contributions", {})
-                contribs[c_name] = contribs.get(c_name, 0) + log_hours
-                st.session_state.data["contributions"] = contribs
-                
-                save_data()
-                st.success("Activity logged successfully!")
-                st.rerun()
+                st.session_state.data["logs"].append({"user": c_name, "date": str(ld), "minutes": lm, "task": lt, "project": lp})
+                all_contribs[c_name] = all_contribs.get(c_name, 0) + lm
+                save_data(); st.rerun()
 
-    st.markdown("---")
-
-    # 2. VIEW PREVIOUS LOGS
-    st.subheader("📜 Your Recent Entries")
-    
-    # Filter logs for the current user and selected project
-    all_logs = st.session_state.data.get("logs", [])
-    user_logs = [l for l in all_logs if l.get("user") == c_name and l.get("project") == view_proj]
-
-    if not user_logs:
-        st.write("No logs found for this project yet.")
-    else:
-        # Convert to DataFrame for a nice table look
-        df_logs = pd.DataFrame(user_logs)
-        # Clean up column names for display
-        df_logs = df_logs[["date", "minutes", "task"]].sort_values(by="date", ascending=False)
-        st.table(df_logs)
-
-# --- CONTRIBUTION TRACKER TAB ---
+# --- TAB 3: PROGRESS ---
 with active_tab[3]:
-    st.title("⏳ Time Management")
-    
-    # 1. PERMISSIONS CHECK
-    # Ensure is_broch_rep or other roles are defined
+    st.title("📊 Progress Tracker")
     is_broch_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "BROCHURE")
     
     if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
-        st.subheader("Add Contribution")
-        proj_members = [m["name"] for m in st.session_state.data["members"] if m["project"] == view_proj]
-        
-        if proj_members:
-            # The Form starts here
-            with st.form("time_input_form"):
-                target = st.selectbox("Select Member", proj_members)
-                
-                # Create two columns INSIDE the form
-                col_h, col_m = st.columns(2)
-                
-                # Put the inputs inside the columns
-                h = col_h.number_input("Hours", min_value=0, max_value=24, value=0)
-                m = col_m.number_input("Minutes", min_value=0, max_value=59, value=0)
-                
-                # The Submit Button
-                if st.form_submit_button("➕ Add Time to Record"):
-                    total_new_minutes = (h * 60) + m
-                    
-                    if total_new_minutes > 0:
-                        # Ensure contributions dict exists
-                        if "contributions" not in st.session_state.data:
-                            st.session_state.data["contributions"] = {}
-                        
-                        # Update the value
-                        current_total = st.session_state.data["contributions"].get(target, 0)
-                        st.session_state.data["contributions"][target] = current_total + total_new_minutes
-                        
-                        save_data()
-                        st.success(f"Added {h}h {m}m to {target}")
-                        st.rerun()
-                    else:
-                        st.warning("Please enter a time greater than 0.")
-        else:
-            st.info("No members found in this project to assign time to.")
+        with st.form(key=f"time_add_{view_proj}"):
+            st.subheader("Add Extra Contribution")
+            target = st.selectbox("Member", [m['name'] for m in members])
+            h = st.number_input("Hours", min_value=0)
+            if st.form_submit_button("Add Time"):
+                st.session_state.data["contributions"][target] = st.session_state.data["contributions"].get(target, 0) + (h*60)
+                save_data(); st.rerun()
 
-    st.divider()
-    st.subheader("📊 Project Progress Summary")
+    sum_list = [{"Name": m["name"], "Total": f"{all_contribs.get(m['name'], 0)//60}h"} for m in members]
+    st.table(pd.DataFrame(sum_list))
 
-    # 2. SAFE TABLE DISPLAY
-    all_contribs = st.session_state.data.get('contributions', {})
-    sum_list = []
-    
-    for m in st.session_state.data.get("members", []):
-        if m.get("project") == view_proj:
-            mins = all_contribs.get(m['name'], 0)
-            sum_list.append({
-                "Name": m["name"], 
-                "Role": m.get("sub_role", "Member"),
-                "Total Time": f"{mins//60}h {mins%60}m"
-            })
-    
-    if sum_list: 
-        st.table(pd.DataFrame(sum_list))
-    else:
-        st.info("No contribution data found for this project.")
-        
-# --- ADMIN TAB ---
-if c_role == "Chairman":
+# --- TAB 4: ADMIN ---
+if is_chair:
     with active_tab[4]:
         st.title("⚙️ Admin Control")
         t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
-        # --- CONTRIBUTION TRACKER TAB ---
-with active_tab[3]:
-    st.title("⏳ Time Management")
-    
-    # 1. PERMISSIONS CHECK
-    # Ensure is_broch_rep or other roles are defined
-    is_broch_rep = any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []) if m.get('project') == "BROCHURE")
-    
-    if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
-        st.subheader("Add Contribution")
-        proj_members = [m["name"] for m in st.session_state.data["members"] if m["project"] == view_proj]
         
-        if proj_members:
-            # The Form starts here
-            with st.form(key=f"time_input_form_{view_proj}"):
-                target = st.selectbox("Select Member", proj_members)
-                
-                # Create two columns INSIDE the form
-                col_h, col_m = st.columns(2)
-                
-                # Put the inputs inside the columns
-                h = col_h.number_input("Hours", min_value=0, max_value=24, value=0)
-                m = col_m.number_input("Minutes", min_value=0, max_value=59, value=0)
-                
-                # The Submit Button
-                if st.form_submit_button("➕ Add Time to Record"):
-                    total_new_minutes = (h * 60) + m
-                    
-                    if total_new_minutes > 0:
-                        # Ensure contributions dict exists
-                        if "contributions" not in st.session_state.data:
-                            st.session_state.data["contributions"] = {}
-                        
-                        # Update the value
-                        current_total = st.session_state.data["contributions"].get(target, 0)
-                        st.session_state.data["contributions"][target] = current_total + total_new_minutes
-                        
-                        save_data()
-                        st.success(f"Added {h}h {m}m to {target}")
-                        st.rerun()
-                    else:
-                        st.warning("Please enter a time greater than 0.")
-        else:
-            st.info("No members found in this project to assign time to.")
+        with t1:
+            st.subheader("Manage Roster")
+            col_skit, col_broch = st.columns(2)
+            with col_skit:
+                st.write("🎭 **SKIT**")
+                for i, m in enumerate([x for x in st.session_state.data["members"] if x['project']=="SKIT"]):
+                    if st.button(f"Delete {m['name']}", key=f"ds_{i}"):
+                        st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
+                        save_data(); st.rerun()
+            with col_broch:
+                st.write("📄 **BROCHURE**")
+                for i, m in enumerate([x for x in st.session_state.data["members"] if x['project']=="BROCHURE"]):
+                    if st.button(f"Delete {m['name']}", key=f"db_{i}"):
+                        st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
+                        save_data(); st.rerun()
 
-    st.divider()
-    st.subheader("📊 Project Progress Summary")
-
-    # 2. SAFE TABLE DISPLAY
-    all_contribs = st.session_state.data.get('contributions', {})
-    sum_list = []
-    
-    for m in st.session_state.data.get("members", []):
-        if m.get("project") == view_proj:
-            mins = all_contribs.get(m['name'], 0)
-            sum_list.append({
-                "Name": m["name"], 
-                "Role": m.get("sub_role", "Member"),
-                "Total Time": f"{mins//60}h {mins%60}m"
-            })
-    
-    if sum_list: 
-        st.table(pd.DataFrame(sum_list))
-    else:
-        st.info("No contribution data found for this project.")
-        
         with t2:
             with st.form("e_man"):
-                p = st.selectbox("Project", ["SKIT", "BROCHURE"])
-                t = st.selectbox("Type", ["Discussion", "Rehearsal"])
-                d = st.date_input("Date")
-                s = st.time_input("Start")
-                et = st.time_input("End")
-                v = st.text_input("Venue")
+                p = st.selectbox("Proj", ["SKIT", "BROCHURE"])
+                type_ev = st.selectbox("Type", ["Discussion", "Rehearsal"])
+                d_ev = st.date_input("Date")
+                s_ev = st.time_input("Start")
                 if st.form_submit_button("Add Event"):
-                    st.session_state.data["events"].append({"project": p, "type": t, "date": d, "start_time": s, "end_time": et, "venue": v})
+                    st.session_state.data["events"].append({"project": p, "type": type_ev, "date": d_ev, "start_time": s_ev, "status": "Active"})
                     save_data(); st.rerun()
-                    
+            
             st.divider()
-        st.subheader("📝 Manage Scheduled Events")
-        # --- INSIDE ADMIN TAB -> EVENTS SECTION (t2) ---
-all_evs = st.session_state.data.get("events", [])
+            for i, ev in enumerate(st.session_state.data.get("events", [])):
+                with st.expander(f"Edit: {ev['type']} ({ev['date']})"):
+                    with st.form(f"ed_ev_{i}"):
+                        note = st.text_input("Cancel Note", value=ev.get("note", ""))
+                        stat = st.selectbox("Status", ["Active", "Cancelled"], index=0 if ev.get("status")=="Active" else 1)
+                        if st.form_submit_button("Save"):
+                            st.session_state.data["events"][i]["note"] = note
+                            st.session_state.data["events"][i]["status"] = stat
+                            save_data(); st.rerun()
+                    if st.button("Delete Permanently", key=f"f_del_{i}"):
+                        st.session_state.data["events"].pop(i); save_data(); st.rerun()
 
-if not all_evs:
-    st.write("No events scheduled.")
-else:
-    for i, ev in enumerate(all_evs):
-        with st.expander(f"⚙️ Manage: {ev['type']} ({ev['date']})"):
-            # 1. THE EDIT FORM
-            with st.form(key=f"edit_form_{i}"):
-                st.write("### Edit Event Details")
-                new_note = st.text_input("Cancellation Note / Update", value=ev.get("note", ""))
-                new_status = st.selectbox("Event Status", ["Active", "Cancelled"], 
-                                        index=0 if ev.get("status") != "Cancelled" else 1)
-                
-                # THE CRITICAL SUBMIT BUTTON
-                submit_edit = st.form_submit_button("✅ Save Changes")
-                
-                if submit_edit:
-                    st.session_state.data["events"][i]["note"] = new_note
-                    st.session_state.data["events"][i]["status"] = new_status
-                    save_data()
-                    st.success("Event updated!")
-                    st.rerun()
-
-            # 2. THE DELETE OPTION (Outside the form so it works instantly)
-            st.write("---")
-            if st.button(f"🗑️ Delete Permanently", key=f"force_del_{i}", help="This cannot be undone"):
-                st.session_state.data["events"].pop(i)
-                save_data()
-                st.rerun()
-                        
         with t3:
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
-                c1, c2 = st.columns([4, 1])
-                c1.write(f"{a['name']} ({a['role']})")
-                if c2.button("Delete Account", key=f"da_{i}"):
+                st.write(f"{a['name']} ({a['role']})")
+                if st.button("Delete Account", key=f"acc_del_{i}"):
                     st.session_state.data["accounts"].pop(i); save_data(); st.rerun()
