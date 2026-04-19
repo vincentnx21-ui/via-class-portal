@@ -349,12 +349,52 @@ if is_chair:
                     save_data(); st.rerun()
 
         with at2:
+            st.subheader("🗓️ Manage Events")
+            # --- 1. CREATE EVENT FORM ---
             with st.form("add_e"):
                 ep, ty, d = st.selectbox("Project", ["SKIT", "BROCHURE"]), st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session", "Production Day"]), st.date_input("Date")
                 st_time, v = st.time_input("Start"), st.text_input("Venue")
                 if st.form_submit_button("Add Event"):
-                    st.session_state.data["events"].append({"project": ep, "type": ty, "date": str(d), "venue": v, "start_time": str(st_time), "status": "Active"})
+                    st.session_state.data["events"].append({
+                        "project": ep, "type": ty, "date": str(d), 
+                        "venue": v, "start_time": str(st_time), "status": "Active"
+                    })
                     save_data(); st.rerun()
+
+            st.divider()
+            st.subheader("📝 Existing Events")
+            
+            # --- 2. EDIT & DELETE LOGIC ---
+            # Loop through events to display them for management
+            for i, ev in enumerate(st.session_state.data.get("events", [])):
+                with st.container(border=True):
+                    c1, c2 = st.columns([4, 1])
+                    c1.write(f"**{ev['type']}** ({ev['project']})")
+                    c1.caption(f"📅 {ev['date']} | 📍 {ev.get('venue', 'N/A')} | 🕒 {ev['start_time']}")
+                    
+                    # DELETE BUTTON
+                    if c2.button("🗑️ Delete", key=f"del_ev_{i}"):
+                        st.session_state.data["events"].pop(i)
+                        save_data()
+                        st.rerun()
+                    
+                    # EDIT EXPANDER
+                    with st.expander("✏️ Edit Details"):
+                        with st.form(f"edit_ev_{i}"):
+                            new_type = st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session", "Production Day"], 
+                                                 index=["Discussion", "Rehearsal", "Work Session", "Production Day"].index(ev['type']))
+                            new_venue = st.text_input("Venue", value=ev.get("venue", ""))
+                            new_note = st.text_input("Cancel Note/Status Reason", value=ev.get("note", ""))
+                            new_stat = st.selectbox("Status", ["Active", "Cancelled"], 
+                                                 index=0 if ev.get("status") == "Active" else 1)
+                            
+                            if st.form_submit_button("Save Changes"):
+                                st.session_state.data["events"][i]["type"] = new_type
+                                st.session_state.data["events"][i]["venue"] = new_venue
+                                st.session_state.data["events"][i]["note"] = new_note
+                                st.session_state.data["events"][i]["status"] = new_stat
+                                save_data()
+                                st.rerun()
 
         with at3:
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
