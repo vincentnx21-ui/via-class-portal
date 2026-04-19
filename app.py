@@ -215,15 +215,10 @@ with active_tab[0]:
     upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
     col_b.metric("Upcoming Events", upcoming_events)
     
-    # Column C: Project Status (Restoring the "On Track" delta)
+    # Column C: Project Status
     col_c.metric(label="Project Status", value="Active", delta="On Track")
-    all_events = st.session_state.data.get("events", [])
-    upcoming_events = len([e for e in all_events if e.get("project") == view_proj])
-    
-    col_a.metric("Your VIA Hours", f"{user_minutes // 60}h")
-    col_b.metric("Upcoming Events", upcoming_events)
-    col_c.metric("Project Status", "Active", delta="On Track")
 
+    # --- Lower Section: RSVP and Roster ---
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -246,6 +241,7 @@ with active_tab[0]:
 
                     if not is_cancelled:
                         with st.expander("Update My RSVP"):
+                            # Unique key includes project and index to avoid collisions
                             with st.form(f"rsvp_form_{i}_{view_proj}"):
                                 s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
                                 r = st.text_input("Note/Reason")
@@ -254,17 +250,21 @@ with active_tab[0]:
                                     new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
                                     st.session_state.data["rsvp"] = [x for x in st.session_state.data.get("rsvp", []) if not (x['event_id'] == e_id and x['name'] == c_name)]
                                     st.session_state.data["rsvp"].append(new_rsvp)
-                                    save_data(); st.success("RSVP Saved!"); st.rerun()
+                                    save_data()
+                                    st.success("RSVP Saved!")
+                                    st.rerun()
                     else:
                         st.info("RSVP disabled for cancelled event.")
 
     with col2:
         st.subheader("👥 Team Roster")
         members = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
+        if not members:
+            st.write("No members assigned yet.")
         for m in members:
             st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m['name']}**")
             st.caption(f"Focus: {m['sub_role']}")
-
+            
 # --- TAB 1: ATTENDANCE ---
 with active_tab[1]:
     st.title("✅ Attendance Tracker")
