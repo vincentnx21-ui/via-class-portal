@@ -401,67 +401,64 @@ with active_tab[3]:
 
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
-    st.title("📁 Class Directory & VIA Summary")
-    st.info("Below is the consolidated list of all members and their total contributions tracked via the dashboard.")
+    st.title("📁 Official Class Roster & VIA Summary")
+    st.info("This list only includes members officially added to the project roster by the Chairman.")
     
-    # Extract data from the same sources as the Dashboard
-    all_accounts = st.session_state.data.get("accounts", [])
+    # Switch data source to 'members' instead of 'accounts'
+    all_members = st.session_state.data.get("members", [])
     all_contribs = st.session_state.data.get("contributions", {})
     all_logs = st.session_state.data.get("logs", [])
     
-    if not all_accounts:
-        st.warning("No accounts have been registered in the system yet.")
+    if not all_members:
+        st.warning("The roster is currently empty. Please add members in the Admin tab.")
     else:
-        # Prepare the list for the table
         summary_data = []
         
-        for acc in all_accounts:
-            name = acc['name']
-            role = acc['role']
+        for m in all_members:
+            name = m['name']
+            project = m['project']
+            role_in_project = m.get('sub_role', 'Member')
             
-            # 1. Get VIA Time (Same logic as Dashboard Metric)
+            # 1. Get VIA Time for this specific member
             total_mins = all_contribs.get(name, 0)
             h = total_mins // 60
-            m = total_mins % 60
-            via_time_display = f"{h}h {m}m"
+            mins = total_mins % 60
+            via_time_display = f"{h}h {mins}m"
             
-            # 2. Get Contribution Details (Checking Activity Logs)
-            # We filter the logs for this specific person and join their task descriptions
-            tasks = [l['task'] for l in all_logs if l['user'] == name]
+            # 2. Get Contribution Details from logs
+            tasks = [log['task'] for log in all_logs if log['user'] == name]
             if tasks:
-                # Show the 3 most recent tasks to keep the table clean
                 contribution_detail = " | ".join(tasks[-3:]) 
             else:
                 contribution_detail = "No activities logged yet"
                 
             summary_data.append({
                 "Student Name": name,
-                "Role": role,
+                "Project": project,
+                "Role": role_in_project,
                 "Total VIA Time": via_time_display,
                 "Recent Contributions": contribution_detail
             })
         
-        # Create the visual table
+        # Create the DataFrame
         df_summary = pd.DataFrame(summary_data)
         
-        # Search functionality so the Teacher can find specific people
-        search_query = st.text_input("🔍 Search by name...", "")
-        if search_query:
-            df_summary = df_summary[df_summary["Student Name"].str.contains(search_query, case=False)]
-            
+        # Add a filter for Project to make it easier for teachers
+        proj_filter = st.radio("Filter by Project", ["All", "SKIT", "BROCHURE"], horizontal=True)
+        if proj_filter != "All":
+            df_summary = df_summary[df_summary["Project"] == proj_filter]
+
         # Display the data
         st.dataframe(
             df_summary, 
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Total VIA Time": st.column_config.TextColumn("⏱️ Total VIA Time"),
-                "Recent Contributions": st.column_config.TextColumn("🛠️ Contribution History")
+                "Total VIA Time": st.column_config.TextColumn("⏱️ Hours"),
+                "Recent Contributions": st.column_config.TextColumn("🛠️ Activity Summary")
             }
         )
-
-    st.success(f"Total Class Members Registered: {len(all_accounts)}")
-
+    
 # --- TAB 5: ADMIN ---
 if is_chair:
     with active_tab[5]: # This must be 5 now!
