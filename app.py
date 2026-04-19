@@ -504,7 +504,7 @@ if is_chair:
         p = col_p.selectbox("Assign Project", ["SKIT", "BROCHURE"])
         
         col_r, col_s = st.columns(2)
-        r = col_r.checkbox("Is Representative?") "BROCHURE"])
+        r = col_r.checkbox("Is Representative?")
 
         s = col_s.selectbox(
             "Specific Role", 
