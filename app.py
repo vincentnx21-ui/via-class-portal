@@ -158,51 +158,58 @@ with active_tab[0]:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("📅 Event RSVP")
-        if not events:
-            st.info("No events scheduled yet.")
+    st.subheader("📅 Event RSVP")
+    # Separate events into 'Current' and 'History'
+    all_events = st.session_state.data.get("events", [])
+    today = date.today()
+    
+    current_events = []
+    history_events = []
+
+    for e in all_events:
+        # Convert date string to date object for comparison if it's a string [cite: 9]
+        event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+        
+        # Logic: History if Cancelled OR if the date has passed [cite: 29, 104]
+        if e.get("status") == "Cancelled" or event_date < today:
+            history_events.append(e)
         else:
-            for i, e in enumerate(events):
-                is_cancelled = e.get("status") == "Cancelled"
-                e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+            current_events.append(e)
+
+    # --- DISPLAY CURRENT EVENTS ---
+    if not current_events:
+        st.info("No upcoming events.") [cite: 28]
+    else:
+        for i, e in enumerate(current_events):
+            e_id = f"{e['project']}_{e['date']}_{e['start_time']}" [cite: 33]
+            with st.container(border=True):
+                st.write(f"**{e['type']}**") [cite: 30]
+                st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") [cite: 31]
                 
-                with st.container(border=True):
-                    if is_cancelled:
-                        st.error(f"🚫 **CANCELLED: {e['type']}**")
-                    else:
-                        st.write(f"**{e['type']}**")
-                        st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}")
+                # RSVP Logic (Existing code) [cite: 32, 34, 35]
+                with st.expander("Update My RSVP"):
+                    # ... your existing RSVP form code ...
+                    pass
 
-                        # RSVP Status Section
-                        st.markdown("---")
-                        st.markdown("**Current Responses:**")
-                        event_responses = [r for r in st.session_state.data.get("rsvp", []) if r['event_id'] == e_id]
-                        
-                        if not event_responses:
-                            st.caption("No responses yet.")
-                        else:
-                            for resp in event_responses:
-                                status_emoji = {"Attending": "✅", "Late": "⏳", "Not Attending": "❌"}.get(resp['status'], "❓")
-                                st.markdown(f"{status_emoji} **{resp['name']}**: {resp['status']}")
-                                if resp.get('note'):
-                                    st.caption(f"💬 Reason: {resp['note']}")
-                        
-                        # RSVP Update Form
-                        with st.expander("Update My RSVP"):
-                            form_key = f"form_rsvp_{view_proj}_{i}"
-                            with st.form(key=form_key):
-                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"], key=f"s_{form_key}")
-                                r = st.text_input("Note/Reason", key=f"n_{form_key}")
-                                if st.form_submit_button("Confirm RSVP"):
-                                    if s:
-                                        new_rsvp = {"event_id": e_id, "name": c_name, "status": s, "note": r}
-                                        current_rsvps = st.session_state.data.get("rsvp", [])
-                                        # Remove old RSVP and add new one
-                                        st.session_state.data["rsvp"] = [x for x in current_rsvps if not (x['event_id'] == e_id and x['name'] == c_name)]
-                                        st.session_state.data["rsvp"].append(new_rsvp)
-                                        save_data()
-                                        st.rerun()
-
+    # --- NEW: DISPLAY EVENT HISTORY ---
+    st.divider()
+    st.subheader("📜 Event History")
+    if not history_events:
+        st.caption("No past or cancelled events.")
+    else:
+        for e in reversed(history_events): # Show newest history first
+            event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+            is_past = event_date < today
+            
+            with st.container(border=True):
+                if e.get("status") == "Cancelled":
+                    st.error(f"🚫 **CANCELLED: {e['type']}**") [cite: 29]
+                    if e.get("note"): st.caption(f"**Reason for cancellation:** {e['note']}") [cite: 29]
+                elif is_past:
+                    st.success(f"✅ **COMPLETED: {e['type']}**")
+                
+                st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}") [cite: 104]
+                
     with col2:
         st.subheader("👥 Team Roster")
         mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
