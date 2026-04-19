@@ -9,6 +9,24 @@ import os
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 
+# --- CUSTOM CSS ---
+st.markdown("""
+    <style>
+    .main { background-color: #f5f7f9; }
+    div.stButton > button:first-child {
+        background-color: #007bff;
+        color: white;
+        border-radius: 10px;
+    }
+    section[data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+    }
+    section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] label {
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- 2. FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
     try:
@@ -112,22 +130,39 @@ if not st.session_state.authenticated:
     st.stop()
 
 # --- 5. NAVIGATION ---
+# --- 5. NAVIGATION ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
-is_chair = (c_role == "Chairman")
-is_teach = (c_role == "Teacher")
-is_skit_rep = (c_role == "Skit Representative")
-is_broch_rep = (c_role == "Brochure Representative")
 
-st.sidebar.title(f"👤 {c_name}")
-if st.sidebar.button("Logout"):
+# Sidebar Profile Header
+st.sidebar.markdown(f"### 👤 Welcome, \n**{c_name}**")
+st.sidebar.caption(f"Role: {c_role}")
+
+# Split Navigation into logical groups
+st.sidebar.markdown("---")
+view_proj = st.sidebar.radio("📁 Current Project", ["SKIT", "BROCHURE"])
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📍 Navigation")
+nav_options = {
+    "🏠 Dashboard": "Dashboard",
+    "📝 Attendance": "Attendance",
+    "🕒 Activity Log": "Activity Log",
+    "📊 Progress Tracker": "Contribution Tracker"
+}
+
+# Only show Management to Chairman
+if c_role == "Chairman":
+    nav_options["⚙️ Admin Center"] = "Management Center"
+
+# Create the menu
+choice = st.sidebar.radio("Go to", list(nav_options.keys()), label_visibility="collapsed")
+page = nav_options[choice]
+
+st.sidebar.markdown("---")
+if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
-
-view_proj = st.sidebar.radio("Project View", ["SKIT", "BROCHURE"])
-nav = ["Dashboard", "Attendance", "Activity Log", "Contribution Tracker"]
-if is_chair: nav.append("Management Center")
-page = st.sidebar.radio("Menu", nav)
-
+# --- 6. DASHBOARD ---
 if page == "Dashboard":
     st.title(f"🚀 {view_proj} Project Portal")
     
@@ -180,7 +215,7 @@ if page == "Dashboard":
             role_icon = "⭐" if m['is_rep'] else "👤"
             st.markdown(f"{role_icon} **{m['name']}**")
             st.caption(f"Focus: {m['sub_role']}")
-            
+    
 # --- ATTENDANCE ---
 elif page == "Attendance":
     st.title("✅ Attendance")
