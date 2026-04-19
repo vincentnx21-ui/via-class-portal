@@ -254,8 +254,6 @@ with active_tab[2]:
                 ld, lm, lt = st.date_input("Date"), st.number_input("Minutes", 5, step=5), st.text_input("Task")
                 lp = st.selectbox("Project", ["SKIT", "BROCHURE"], index=0 if view_proj=="SKIT" else 1)
                 if st.form_submit_button("Submit"):
-                    ukey = f"{c_name}_{lp}"
-                    st.session_state.data["contributions"][ukey] = st.session_state.data["contributions"].get(ukey, 0) + lm
                     st.session_state.data["logs"].append({"log_id": f"log_{datetime.now().strftime('%Y%m%d%H%M%S')}", "user": c_name, "date": str(ld), "minutes": lm, "task": lt, "project": lp, "comments": []})
                     save_data(); st.success("Logged!"); st.rerun()
     
@@ -267,6 +265,34 @@ with active_tab[2]:
             ct, cs = st.columns([3, 1])
             ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
             cs.info(f"{log['minutes']} mins")
+
+            if is_teach:
+                col1, col2 = st.columns(2)
+    
+                # 🗑️ DELETE BUTTON
+                if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
+                    st.session_state.data["logs"] = [
+                        l for l in st.session_state.data["logs"]
+                        if l.get("log_id") != log["log_id"]
+                    ]
+                    save_data()
+                    st.rerun()
+    
+                # ✏️ EDIT BUTTON
+                with col2.expander("✏️ Edit"):
+                    with st.form(f"edit_{log['log_id']}"):
+                        new_task = st.text_input("Task", value=log["task"])
+                        new_minutes = st.number_input("Minutes", value=log["minutes"], step=5)
+    
+                        if st.form_submit_button("Save"):
+                            for l in st.session_state.data["logs"]:
+                                if l.get("log_id") == log["log_id"]:
+                                    l["task"] = new_task
+                                    l["minutes"] = new_minutes
+    
+                            save_data()
+                            st.rerun()
+            
             for c in log.get("comments", []): st.markdown(f"> **{c['teacher']}:** {c['text']}")
             if is_teach:
                 with st.expander("📝 Add Comment"):
