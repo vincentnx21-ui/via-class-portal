@@ -491,70 +491,77 @@ with active_tab[4]:
         )
         
 # --- TAB 5: ADMIN ---
+# --- TAB 5: ADMIN (Chairman Only) ---
 if is_chair:
-    with active_tab[5]: # This must be 5 now!
+    with active_tab[5]: 
         st.title("⚙️ Admin Control")
-        t1, t2, t3 = st.tabs(["Roster", "Events", "Accounts"])
+        t1, t2, t3 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts"])
         
-    with t1:
-        st.subheader("➕ Add Official Member")
-    with st.form(key="admin_roster_entry_form", clear_on_submit=True):
-        col_n, col_p = st.columns(2)
-        n = col_n.text_input("Full Name").strip().title()
-        p = col_p.selectbox("Assign Project", ["SKIT", "BROCHURE"])
-        
-        col_r, col_s = st.columns(2)
-        r = col_r.checkbox("Is Representative?")
-
-        s = col_s.selectbox(
-            "Specific Role", 
-            ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"],
-            index=3 
-        )
-        
-        if st.form_submit_button("Add to Roster"):
-            if n:
-                st.session_state.data["members"].append({
-                    "name": n, "project": p, "is_rep": r, "sub_role": s
-                })
-                save_data()
-                st.success(f"✅ {n} added as {s}!")
-                st.rerun()
+        # --- SUB-TAB 1: ROSTER ---
+        with t1:
+            st.subheader("➕ Add Official Member")
+            # All form code MUST be indented inside 'with t1:'
+            with st.form(key="admin_roster_entry_form", clear_on_submit=True):
+                col_n, col_p = st.columns(2)
+                n = col_n.text_input("Full Name").strip().title()
+                p = col_p.selectbox("Assign Project", ["SKIT", "BROCHURE"])
                 
                 col_r, col_s = st.columns(2)
-                r = col_r.checkbox("Representative?")
-                s = col_s.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "Designer", "Writer", "N/A"])
+                r = col_r.checkbox("Is Representative?")
+                s = col_s.selectbox(
+                    "Specific Role", 
+                    ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"],
+                    index=3 # Default to Designer
+                )
                 
-                if st.form_submit_button("Save Member"):
+                if st.form_submit_button("Add to Roster"):
                     if n:
-                        st.session_state.data["members"].append({"name": n, "project": p, "is_rep": r, "sub_role": s})
-                        save_data(); st.success(f"Added {n}!"); st.rerun()
-            
+                        # Add to the official members list
+                        st.session_state.data["members"].append({
+                            "name": n, 
+                            "project": p, 
+                            "is_rep": r, 
+                            "sub_role": s
+                        })
+                        save_data()
+                        st.success(f"✅ {n} added as {s}!")
+                        st.rerun()
+                    else:
+                        st.error("Please enter a name.")
+
             st.divider()
-            st.subheader("Manage Roster")
+            st.subheader("🗑️ Manage Roster")
             col_skit, col_broch = st.columns(2)
+            
             with col_skit:
                 st.write("🎭 **SKIT**")
-                for i, m in enumerate([x for x in st.session_state.data["members"] if x['project']=="SKIT"]):
+                skit_members = [x for x in st.session_state.data["members"] if x['project']=="SKIT"]
+                for i, m in enumerate(skit_members):
                     if st.button(f"Delete {m['name']}", key=f"ds_{i}"):
                         st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
                         save_data(); st.rerun()
+            
             with col_broch:
                 st.write("📄 **BROCHURE**")
-                for i, m in enumerate([x for x in st.session_state.data["members"] if x['project']=="BROCHURE"]):
+                broch_members = [x for x in st.session_state.data["members"] if x['project']=="BROCHURE"]
+                for i, m in enumerate(broch_members):
                     if st.button(f"Delete {m['name']}", key=f"db_{i}"):
                         st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
                         save_data(); st.rerun()
 
+        # --- SUB-TAB 2: EVENTS ---
         with t2:
-            st.subheader("Create Event")
+            st.subheader("🗓️ Create Event")
             with st.form("admin_event_create"):
-                p = st.selectbox("Proj", ["SKIT", "BROCHURE"])
-                type_ev = st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session"])
+                ep = st.selectbox("Project", ["SKIT", "BROCHURE"])
+                type_ev = st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session", "Production Day"])
                 d_ev = st.date_input("Date")
-                s_ev = st.time_input("Start")
+                s_ev = st.time_input("Start Time")
                 if st.form_submit_button("Add Event"):
-                    st.session_state.data["events"].append({"project": p, "type": type_ev, "date": d_ev, "start_time": s_ev, "status": "Active"})
+                    st.session_state.data["events"].append({
+                        "project": ep, "type": type_ev, "date": str(d_ev), 
+                        "start_time": str(s_ev), "status": "Active"
+                    })
                     save_data(); st.success("Event Created"); st.rerun()
             
             st.divider()
@@ -563,17 +570,21 @@ if is_chair:
                     with st.form(f"ed_ev_form_{i}"):
                         note = st.text_input("Cancel Note", value=ev.get("note", ""))
                         stat = st.selectbox("Status", ["Active", "Cancelled"], index=0 if ev.get("status")=="Active" else 1)
-                        if st.form_submit_button("Save"):
+                        if st.form_submit_button("Save Changes"):
                             st.session_state.data["events"][i]["note"] = note
                             st.session_state.data["events"][i]["status"] = stat
                             save_data(); st.rerun()
                     if st.button("Delete Permanently", key=f"f_del_ev_{i}"):
-                        st.session_state.data["events"].pop(i); save_data(); st.rerun()
+                        st.session_state.data["events"].pop(i)
+                        save_data(); st.rerun()
 
+        # --- SUB-TAB 3: ACCOUNTS ---
         with t3:
-            st.subheader("Manage Accounts")
+            st.subheader("👤 Manage Website Accounts")
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
-                c1, c2 = st.columns([4, 1])
-                c1.write(f"{a['name']} ({a['role']})")
-                if c2.button("Delete", key=f"acc_del_{i}"):
-                    st.session_state.data["accounts"].pop(i); save_data(); st.rerun()
+                with st.container(border=True):
+                    c1, c2 = st.columns([4, 1])
+                    c1.write(f"**{a['name']}** ({a['role']})")
+                    if c2.button("Wipe", key=f"acc_del_{i}"):
+                        st.session_state.data["accounts"].pop(i)
+                        save_data(); st.rerun()
