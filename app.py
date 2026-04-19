@@ -387,7 +387,6 @@ with active_tab[2]:
                                     st.rerun()
 
 # --- TAB 3: PROGRESS ---
-# --- TAB 3: PROGRESS ---
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
     
@@ -576,12 +575,12 @@ with active_tab[4]:
 if is_chair:
     with active_tab[5]: 
         st.title("⚙️ Admin Control")
-        t1, t2, t3 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts"])
+        # Added a 4th sub-tab: "⚖️ Corrections"
+        t1, t2, t3, t4 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections"])
         
         # --- SUB-TAB 1: ROSTER ---
         with t1:
             st.subheader("➕ Add Official Member")
-            # All form code MUST be indented inside 'with t1:'
             with st.form(key="admin_roster_entry_form", clear_on_submit=True):
                 col_n, col_p = st.columns(2)
                 n = col_n.text_input("Full Name").strip().title()
@@ -592,17 +591,13 @@ if is_chair:
                 s = col_s.selectbox(
                     "Specific Role", 
                     ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"],
-                    index=3 # Default to Designer
+                    index=3 
                 )
                 
                 if st.form_submit_button("Add to Roster"):
                     if n:
-                        # Add to the official members list
                         st.session_state.data["members"].append({
-                            "name": n, 
-                            "project": p, 
-                            "is_rep": r, 
-                            "sub_role": s
+                            "name": n, "project": p, "is_rep": r, "sub_role": s
                         })
                         save_data()
                         st.success(f"✅ {n} added as {s}!")
@@ -614,37 +609,28 @@ if is_chair:
             st.subheader("🗑️ Manage Roster")
             col_skit, col_broch = st.columns(2)
             
-            # --- SKIT SECTION ---
             with col_skit:
                 st.write("🎭 **SKIT TEAM**")
-                # We create a unique list just for Skit
                 skit_list = [x for x in st.session_state.data["members"] if x['project'] == "SKIT"]
-                
                 if not skit_list:
                     st.caption("No members in Skit.")
                 else:
                     for i, m in enumerate(skit_list):
-                        # Unique key 'del_skit_' prevents conflict with Brochure buttons
                         if st.button(f"Remove {m['name']}", key=f"del_skit_{i}"):
-                            st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
-                            save_data()
-                            st.rerun()
+                            # Modified to remove specific name AND project match to avoid accidental double-deletion
+                            st.session_state.data["members"] = [x for x in st.session_state.data["members"] if not (x['name'] == m['name'] and x['project'] == "SKIT")]
+                            save_data(); st.rerun()
             
-            # --- BROCHURE SECTION ---
             with col_broch:
                 st.write("📄 **BROCHURE TEAM**")
-                # We create a unique list just for Brochure
                 broch_list = [x for x in st.session_state.data["members"] if x['project'] == "BROCHURE"]
-                
                 if not broch_list:
                     st.caption("No members in Brochure.")
                 else:
                     for i, m in enumerate(broch_list):
-                        # Unique key 'del_broch_' ensures this is distinct
                         if st.button(f"Remove {m['name']}", key=f"del_broch_{i}"):
-                            st.session_state.data["members"] = [x for x in st.session_state.data["members"] if x['name'] != m['name']]
-                            save_data()
-                            st.rerun()
+                            st.session_state.data["members"] = [x for x in st.session_state.data["members"] if not (x['name'] == m['name'] and x['project'] == "BROCHURE")]
+                            save_data(); st.rerun()
 
         # --- SUB-TAB 2: EVENTS ---
         with t2:
@@ -685,3 +671,40 @@ if is_chair:
                     if c2.button("Wipe", key=f"acc_del_{i}"):
                         st.session_state.data["accounts"].pop(i)
                         save_data(); st.rerun()
+
+        # --- NEW SUB-TAB 4: CORRECTIONS (Add/Reduce Time) ---
+        with t4:
+            st.subheader("⚖️ Manual Time Correction")
+            st.info("Positive numbers add time. Negative numbers (e.g., -30) reduce time.")
+            
+            with st.form("admin_manual_adj"):
+                col1, col2 = st.columns(2)
+                adj_p = col1.selectbox("Project Team", ["SKIT", "BROCHURE"])
+                
+                # Get names only for the selected project
+                names_in_proj = [m['name'] for m in st.session_state.data["members"] if m['project'] == adj_p]
+                adj_n = col2.selectbox("Select Student", names_in_proj if names_in_proj else ["None"])
+                
+                adj_m = st.number_input("Minutes to Change", step=5)
+                adj_reason = st.text_input("Reason (e.g., 'Correction for error' or 'Bonus for extra help')")
+                
+                if st.form_submit_button("🔨 Apply Adjustment"):
+                    if adj_n != "None" and adj_m != 0:
+                        u_key = f"{adj_n}_{adj_p}"
+                        
+                        # Update database
+                        st.session_state.data["contributions"][u_key] = st.session_state.data["contributions"].get(u_key, 0) + adj_m
+                        
+                        # Create log entry for transparency
+                        st.session_state.data["logs"].append({
+                            "log_id": f"admin_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                            "user": adj_n,
+                            "date": str(date.today()),
+                            "minutes": adj_m,
+                            "task": f"ADMIN ADJ: {adj_reason}",
+                            "project": adj_p
+                        })
+                        
+                        save_data()
+                        st.success(f"Adjusted {adj_n}'s {adj_p} time by {adj_m} mins.")
+                        st.rerun()
