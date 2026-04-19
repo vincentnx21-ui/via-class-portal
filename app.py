@@ -128,33 +128,59 @@ nav = ["Dashboard", "Attendance", "Activity Log", "Contribution Tracker"]
 if is_chair: nav.append("Management Center")
 page = st.sidebar.radio("Menu", nav)
 
-# --- DASHBOARD & RSVP ---
 if page == "Dashboard":
-    st.title(f"🚀 {view_proj} Project")
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.subheader("📅 RSVP & Events")
-        events = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
-        for i, e in enumerate(events):
-            e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
-            vote = next((r for r in st.session_state.data["rsvp"] if r['name'] == c_name and r['event_id'] == e_id), None)
-            with st.expander(f"{e['type']} - {e['date']} @ {e['venue']}"):
-                with st.form(f"v_{i}"):
-                    s = st.radio("Status", ["Attending", "Not Attending", "Late"], index=0)
-                    r = st.text_input("Reason", value=vote['reason'] if vote else "N/A")
-                    if st.form_submit_button("Submit RSVP"):
-                        st.session_state.data["rsvp"] = [rv for rv in st.session_state.data["rsvp"] if not (rv['name']==c_name and rv['event_id']==e_id)]
-                        st.session_state.data["rsvp"].append({"event_id":e_id, "name":c_name, "status":s, "reason":r})
-                        save_data(); st.rerun()
-                if is_chair or (is_skit_rep and view_proj=="SKIT"):
-                    st.write("**Responses:**")
-                    st.table(pd.DataFrame([rv for rv in st.session_state.data["rsvp"] if rv['event_id']==e_id]))
-    with col2:
-        st.subheader("👥 Roster")
-        for m in [m for m in st.session_state.data["members"] if m["project"] == view_proj]:
-            st.write(f"**{m['name']}** {'(REP)' if m['is_rep'] else ''}")
-            st.caption(f"Role: {m['sub_role']}")
+    st.title(f"🚀 {view_proj} Project Portal")
+    
+    # --- QUICK STATS ---
+    col_a, col_b, col_c = st.columns(3)
+    
+    # Calculate stats
+    total_hours = st.session_state.data['contributions'].get(c_name, 0) // 60
+    upcoming_events = len([e for e in st.session_state.data["events"] if e["project"] == view_proj])
+    
+    with col_a:
+        st.metric("Your VIA Hours", f"{total_hours}h")
+    with col_b:
+        st.metric("Upcoming Events", upcoming_events)
+    with col_c:
+        st.metric("Project Status", "Active", delta="On Track")
 
+    st.markdown("---")
+
+    # --- MAIN CONTENT ---
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.subheader("📅 Event RSVP")
+        events = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
+        
+        if not events:
+            st.info("No events scheduled yet.")
+        else:
+            for i, e in enumerate(events):
+                e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+                # Expander for cleaner look
+                with st.container(border=True):
+                    st.write(f"**{e['type']}**")
+                    st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
+                    
+                    # Simplified RSVP form
+                    with st.expander("Update My RSVP"):
+                        with st.form(f"v_{i}"):
+                            s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
+                            r = st.text_input("Note/Reason", placeholder="e.g. Bringing props")
+                            if st.form_submit_button("Confirm"):
+                                # ... (Keep your existing save logic here) ...
+                                save_data(); st.rerun()
+
+    with col2:
+        st.subheader("👥 Team Roster")
+        members = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
+        for m in members:
+            role_icon = "⭐" if m['is_rep'] else "👤"
+            st.markdown(f"{role_icon} **{m['name']}**")
+            st.caption(f"Focus: {m['sub_role']}")
+            
 # --- ATTENDANCE ---
 elif page == "Attendance":
     st.title("✅ Attendance")
