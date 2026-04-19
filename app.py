@@ -467,7 +467,7 @@ with active_tab[3]:
         
         if proj_members:
             # The Form starts here
-            with st.form("time_input_form"):
+            with st.form(key=f"time_input_form_{view_proj}"):
                 target = st.selectbox("Select Member", proj_members)
                 
                 # Create two columns INSIDE the form
