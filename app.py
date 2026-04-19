@@ -248,19 +248,43 @@ with active_tab[0]:
                     st.caption(f"📍 {e['venue']} | ⏰ {e['start_time']}")
 
                     # Only show RSVP form if NOT cancelled
-                    if not is_cancelled:
-                        with st.expander("Update My RSVP"):
-                            with st.form(f"rsvp_form_{i}"): # Unique ID for each form
-                                s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
-                                r = st.text_input("Note/Reason")
-                                
-                                # MUST use form_submit_button
-                                if st.form_submit_button("Confirm RSVP"):
-                                    # Your save logic here...
-                                    save_data()
-                                    st.rerun()
-                    else:
-                        st.info("RSVP is disabled for this cancelled event.")
+                    # --- 1. Find this loop in your Dashboard (Tab 0) ---
+            if not is_cancelled:
+                with st.expander("Update My RSVP"):
+                    with st.form(f"rsvp_form_{i}"):
+                        s = st.segmented_control("Status", ["Attending", "Late", "Not Attending"])
+                        r = st.text_input("Note/Reason")
+                        
+                        if st.form_submit_button("Confirm RSVP"):
+                            # --- START RSVP LOGIC ---
+                            e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
+                            
+                            # Prepare the user's RSVP entry
+                            new_rsvp = {
+                                "event_id": e_id,
+                                "name": c_name,
+                                "status": s,
+                                "note": r,
+                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            }
+            
+                            # Ensure rsvp list exists
+                            if "rsvp" not in st.session_state.data:
+                                st.session_state.data["rsvp"] = []
+            
+                            # Remove previous RSVP from this user for this specific event (if any)
+                            st.session_state.data["rsvp"] = [
+                                x for x in st.session_state.data["rsvp"] 
+                                if not (x['event_id'] == e_id and x['name'] == c_name)
+                            ]
+            
+                            # Add the new RSVP
+                            st.session_state.data["rsvp"].append(new_rsvp)
+                            
+                            save_data()
+                            st.success(f"RSVP recorded as {s}!")
+                            st.rerun()
+                            # --- END RSVP LOGIC ---
 
     with col2:
         st.subheader("👥 Team Roster")
@@ -415,34 +439,37 @@ if c_role == "Chairman":
                     
             st.divider()
         st.subheader("📝 Manage Scheduled Events")
-        
-        # --- INSIDE YOUR ADMIN TAB (with active_tab[4] -> with t2) ---
-        all_evs = st.session_state.data.get("events", [])
-        
-        if not all_evs:
-            st.write("No events scheduled.")
-        else:
-            for i, ev in enumerate(all_evs):
-                with st.expander(f"⚙️ Manage: {ev['type']} ({ev['date']})"):
-                    # We put the editing part inside a FORM
-                    with st.form(key=f"edit_form_{i}"):
-                        new_note = st.text_input("Cancellation Note / Update", value=ev.get("note", ""))
-                        new_status = st.selectbox("Event Status", ["Active", "Cancelled"], 
-                                                index=0 if ev.get("status") != "Cancelled" else 1)
-                        
-                        # THIS IS THE REQUIRED SUBMIT BUTTON
-                        if st.form_submit_button("✅ Save Changes"):
-                            st.session_state.data["events"][i]["note"] = new_note
-                            st.session_state.data["events"][i]["status"] = new_status
-                            save_data()
-                            st.success("Event updated!")
-                            st.rerun()
-        
-                    # DELETE button must be OUTSIDE the form (or it needs its own form)
-                    if st.button("🗑️ Delete Permanently", key=f"force_del_{i}"):
-                        st.session_state.data["events"].pop(i)
-                        save_data()
-                        st.rerun()
+        # --- INSIDE ADMIN TAB -> EVENTS SECTION (t2) ---
+all_evs = st.session_state.data.get("events", [])
+
+if not all_evs:
+    st.write("No events scheduled.")
+else:
+    for i, ev in enumerate(all_evs):
+        with st.expander(f"⚙️ Manage: {ev['type']} ({ev['date']})"):
+            # 1. THE EDIT FORM
+            with st.form(key=f"edit_form_{i}"):
+                st.write("### Edit Event Details")
+                new_note = st.text_input("Cancellation Note / Update", value=ev.get("note", ""))
+                new_status = st.selectbox("Event Status", ["Active", "Cancelled"], 
+                                        index=0 if ev.get("status") != "Cancelled" else 1)
+                
+                # THE CRITICAL SUBMIT BUTTON
+                submit_edit = st.form_submit_button("✅ Save Changes")
+                
+                if submit_edit:
+                    st.session_state.data["events"][i]["note"] = new_note
+                    st.session_state.data["events"][i]["status"] = new_status
+                    save_data()
+                    st.success("Event updated!")
+                    st.rerun()
+
+            # 2. THE DELETE OPTION (Outside the form so it works instantly)
+            st.write("---")
+            if st.button(f"🗑️ Delete Permanently", key=f"force_del_{i}", help="This cannot be undone"):
+                st.session_state.data["events"].pop(i)
+                save_data()
+                st.rerun()
                         
         with t3:
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
