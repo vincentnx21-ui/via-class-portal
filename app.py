@@ -143,7 +143,7 @@ with active_tab[0]:
     
     # Top Metrics
     col_a, col_b, col_c = st.columns(3)
-    if not is_teach:
+    if is_chair or is_rep:
         u_key = f"{c_name}_{view_proj}"
         m = st.session_state.data.get('contributions', {}).get(u_key, 0)
         col_a.metric(f"Your {view_proj} Hours", f"{m // 60}h {m % 60}m")
@@ -248,7 +248,7 @@ with active_tab[1]:
 # --- TAB 2: ACTIVITY LOG & TEACHER FEEDBACK ---
 with active_tab[2]:
     st.title("🕒 Activity Log")
-    if not is_teach:
+    if is_chair or is_rep:
         with st.expander("➕ Log New Activity"):
             with st.form(f"log_{view_proj}"):
                 ld, lm, lt = st.date_input("Date"), st.number_input("Minutes", 5, step=5), st.text_input("Task")
