@@ -12,15 +12,10 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 # --- 2. FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
     try:
-        if "firebase" in st.secrets:
-            # For Streamlit Cloud
-            cred = credentials.Certificate(dict(st.secrets["firebase"]))
-        else:
-            # For Local Testing
-            cred = credentials.Certificate("serviceAccountKey.json")
+        # ... (other code above) ...
             
         firebase_admin.initialize_app(cred, {
-            # --- !!! PASTE YOUR URL HERE !!! ---
+            # Make sure there are NO spaces and the URL is inside ' ' 
             'databaseURL': 'https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/' 
         })
     except Exception as e:
