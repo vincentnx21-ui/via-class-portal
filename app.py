@@ -197,16 +197,16 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
 # --- 6. PAGE CONTENT ---
 
 # --- TAB 0: DASHBOARD ---
+# --- TAB 0: DASHBOARD ---
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
-    
     col_a, col_b, col_c = st.columns(3)
-    all_contribs = st.session_state.data.get('contributions', {})
     
-    # Column A: Hours (Students only) or Role (Teachers)
     if c_role != "Teacher":
-        user_minutes = all_contribs.get(c_name, 0)
-        col_a.metric("Your VIA Hours", f"{user_minutes // 60}h {user_minutes % 60}m")
+        # Look for Name + Project from sidebar
+        u_key = f"{c_name}_{view_proj}"
+        user_minutes = st.session_state.data.get('contributions', {}).get(u_key, 0)
+        col_a.metric(f"Your {view_proj} Hours", f"{user_minutes // 60}h {user_minutes % 60}m")
     else:
         col_a.metric("Role", "Faculty Observer")
         
@@ -298,27 +298,35 @@ with active_tab[1]:
 with active_tab[2]:
     st.title("🕒 Activity Log")
     
-    # 1. SUBMISSION FORM (Only for Members/Reps/Chair - Teachers usually don't log hours)
     if c_role != "Teacher":
         with st.expander("➕ Log New Activity"):
             with st.form(key=f"activity_log_form_{view_proj}"):
                 ld = st.date_input("Date", value=date.today())
                 lm = st.number_input("Minutes", min_value=5, step=5)
                 lt = st.text_input("Task Description")
-                lp = st.selectbox("Project", ["SKIT", "BROCHURE"])
+                lp = st.selectbox("Project", ["SKIT", "BROCHURE"]) # The project being worked on
+                
                 if st.form_submit_button("Submit Log"):
+                    # 1. Create the unique key for this specific project role
+                    u_key = f"{c_name}_{lp}"
+                    
+                    # 2. Update the specific project bucket in contributions
+                    st.session_state.data["contributions"][u_key] = st.session_state.data["contributions"].get(u_key, 0) + lm
+                    
+                    # 3. Add to logs
                     new_log = {
                         "log_id": f"log_{datetime.now().strftime('%Y%m%d%H%M%S')}",
                         "user": c_name,
                         "date": str(ld),
                         "minutes": lm,
                         "task": lt,
-                        "project": lp,
-                        "comments": []  # Initialize empty comments list
+                        "project": lp, # Saves the project name
+                        "comments": []
                     }
                     st.session_state.data["logs"].append(new_log)
-                    st.session_state.data["contributions"][c_name] = st.session_state.data["contributions"].get(c_name, 0) + lm
-                    save_data(); st.success("Activity Logged!"); st.rerun()
+                    save_data()
+                    st.success(f"Logged {lm} mins for {lp}!")
+                    st.rerun()
 
     st.divider()
     st.subheader("📜 Recent Activity & Teacher Feedback")
@@ -479,7 +487,7 @@ with active_tab[4]:
     
     m_col1, m_col2, m_col3 = st.columns(3)
     
-    # Calculate Average Time
+    # Calculate Total Class Minutes (Sum of all project-specific keys)
     total_mins = sum(all_contribs.values())
     num_members = len(all_members)
     
@@ -501,22 +509,27 @@ with active_tab[4]:
     if not all_members:
         st.warning("The roster is empty. Add members in the Admin tab to see them here.")
     else:
-        # 2. DATA PROCESSING
+        # 2. DATA PROCESSING (Modified for Project Uniqueness)
         summary_data = []
         for m in all_members:
             name = m['name']
+            proj = m['project'] # 'SKIT' or 'BROCHURE'
             
-            # Time calculation for individual
-            t_mins = all_contribs.get(name, 0)
+            # --- UPDATED LOGIC HERE ---
+            # 1. Time calculation using the unique Name_Project key
+            unique_key = f"{name}_{proj}"
+            t_mins = all_contribs.get(unique_key, 0)
             time_fmt = f"{t_mins // 60}h {t_mins % 60}m"
             
-            # Task history
-            u_tasks = [l['task'] for l in all_logs if l['user'] == name]
+            # 2. Filter logs for this specific user AND this specific project
+            # This ensures John's Skit row doesn't show his Brochure tasks.
+            u_tasks = [l['task'] for l in all_logs if l['user'] == name and l.get('project') == proj]
             recent = " | ".join(u_tasks[-2:]) if u_tasks else "No activity yet"
+            # --------------------------
             
             summary_data.append({
                 "NAME": name,
-                "PROJECT": m['project'],
+                "PROJECT": proj,
                 "ROLE": m.get('sub_role', 'Member'),
                 "VIA TIME": time_fmt,
                 "LATEST TASKS": recent,
@@ -558,7 +571,7 @@ with active_tab[4]:
             file_name=f"VIA_Directory_{date.today()}.csv",
             mime='text/csv',
         )
-
+        
 # --- TAB 5: ADMIN (Chairman Only) ---
 if is_chair:
     with active_tab[5]: 
