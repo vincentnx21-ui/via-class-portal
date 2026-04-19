@@ -382,10 +382,10 @@ with active_tab[2]:
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
     
-    # 1. SUMMARY METRICS
     all_members = st.session_state.data.get("members", [])
     all_contribs = st.session_state.data.get("contributions", {})
     
+    # 1. SUMMARY METRIC
     total_class_mins = sum(all_contribs.values())
     st.metric("Total Class VIA Minutes", f"{total_class_mins} mins")
     
@@ -398,10 +398,11 @@ with active_tab[3]:
         
         with col_add:
             with st.expander("➕ Add Bonus Time"):
-                with st.form("add_time_form"):
-                    target_user = st.selectbox("Select Student", [m['name'] for m in all_members], key="add_user")
-                    bonus_mins = st.number_input("Minutes to Add", min_value=1, step=5)
-                    reason_add = st.text_input("Reason")
+                # Unique key for this form
+                with st.form("add_time_form_v2"):
+                    target_user = st.selectbox("Select Student", [m['name'] for m in all_members], key="sel_add_user")
+                    bonus_mins = st.number_input("Minutes", min_value=1, step=5, key="num_add")
+                    reason_add = st.text_input("Reason", key="txt_add")
                     if st.form_submit_button("Apply Bonus"):
                         st.session_state.data["contributions"][target_user] = st.session_state.data["contributions"].get(target_user, 0) + bonus_mins
                         st.session_state.data["logs"].append({
@@ -409,29 +410,67 @@ with active_tab[3]:
                             "user": target_user, "date": str(date.today()), "minutes": bonus_mins,
                             "task": f"BONUS: {reason_add}", "project": "SYSTEM", "comments": []
                         })
-                        save_data(); st.success(f"Added {bonus_mins}m to {target_user}"); st.rerun()
+                        save_data(); st.success("Added!"); st.rerun()
 
         with col_sub:
             with st.expander("➖ Deduct Time"):
-                with st.form("deduct_time_form"):
-                    deduct_user = st.selectbox("Select Student", [m['name'] for m in all_members], key="sub_user")
-                    penalty_mins = st.number_input("Minutes to Deduct", min_value=1, step=5)
-                    reason_sub = st.text_input("Reason (Required)")
+                # Unique key for this form
+                with st.form("deduct_time_form_v2"):
+                    deduct_user = st.selectbox("Select Student", [m['name'] for m in all_members], key="sel_sub_user")
+                    penalty_mins = st.number_input("Minutes", min_value=1, step=5, key="num_sub")
+                    reason_sub = st.text_input("Reason", key="txt_sub")
                     if st.form_submit_button("Apply Deduction"):
-                        if not reason_sub:
-                            st.error("Please provide a reason.")
-                        else:
-                            current_time = st.session_state.data["contributions"].get(deduct_user, 0)
-                            st.session_state.data["contributions"][deduct_user] = max(0, current_time - penalty_mins)
+                        if reason_sub:
+                            curr = st.session_state.data["contributions"].get(deduct_user, 0)
+                            st.session_state.data["contributions"][deduct_user] = max(0, curr - penalty_mins)
                             st.session_state.data["logs"].append({
                                 "log_id": f"deduct_{datetime.now().strftime('%Y%m%d%H%M%S')}",
                                 "user": deduct_user, "date": str(date.today()), "minutes": -penalty_mins,
                                 "task": f"🛑 DEDUCTION: {reason_sub}", "project": "SYSTEM", "comments": []
                             })
-                            save_data(); st.warning(f"Deducted {penalty_mins}m from {deduct_user}"); st.rerun()
+                            save_data(); st.warning("Deducted!"); st.rerun()
+                        else: st.error("Reason required")
 
     st.divider()
     
+    # 3. INDEPENDENT PROGRESS LISTS
+    st.subheader("👥 Team Progress")
+    
+    prog_skit, prog_broch = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
+    
+    with prog_skit:
+        # Strictly filter for SKIT only
+        skit_only = [m for m in all_members if m['project'] == "SKIT"]
+        if not skit_only:
+            st.info("No members assigned to Skit.")
+        else:
+            for i, m in enumerate(skit_only):
+                m_name = m['name']
+                m_mins = all_contribs.get(m_name, 0)
+                # Goal: 5 hours (300 mins)
+                percent = min(1.0, m_mins / 300)
+                
+                # Using unique column keys to prevent overlap
+                c1, c2 = st.columns([1, 3])
+                c1.write(f"**{m_name}**")
+                c2.progress(percent, text=f"{m_mins // 60}h {m_mins % 60}m")
+
+    with prog_broch:
+        # Strictly filter for BROCHURE only
+        broch_only = [m for m in all_members if m['project'] == "BROCHURE"]
+        if not broch_only:
+            st.info("No members assigned to Brochure.")
+        else:
+            for i, m in enumerate(broch_only):
+                m_name = m['name']
+                m_mins = all_contribs.get(m_name, 0)
+                percent = min(1.0, m_mins / 300)
+                
+                # Using unique column keys to prevent overlap
+                c1, c2 = st.columns([1, 3])
+                c1.write(f"**{m_name}**")
+                c2.progress(percent, text=f"{m_mins // 60}h {m_mins % 60}m")
+                
     # 3. GROUPED PROGRESS BARS
     st.subheader("👥 Progress by Project Team")
     
