@@ -185,37 +185,7 @@ active_tab = st.tabs(tabs_list)
 
 # --- DASHBOARD TAB ---
 with active_tab[0]:
-    # PASTE ALL YOUR DASHBOARD CODE HERE
-    st.title(f"🚀 {view_proj} Dashboard")
-    # ... (the stat cards, the RSVP form, etc.)
-
-# --- ATTENDANCE TAB ---
-with active_tab[1]:
-    # PASTE ALL YOUR ATTENDANCE CODE HERE
-    st.title("📝 Attendance Tracker")
-    # ...
-
-# --- ACTIVITY LOG TAB ---
-with active_tab[2]:
-    # PASTE ALL YOUR LOG CODE HERE
-    st.title("🕒 Activity Log")
-    # ...
-
-# --- CONTRIBUTION TRACKER TAB ---
-with active_tab[3]:
-    # PASTE ALL YOUR CONTRIBUTION CODE HERE
-    st.title("📊 Progress Tracker")
-    # ...
-
-# --- ADMIN TAB ---
-if c_role == "Chairman":
-    with active_tab[4]:
-        # PASTE ALL YOUR MANAGEMENT CENTER CODE HERE
-        st.title("⚙️ Admin Control")
-        # ...
-
-# --- 6. DASHBOARD ---
-if page == "Dashboard":
+    if page == "Dashboard":
     st.title(f"🚀 {view_proj} Project Portal")
     
     # --- QUICK STATS ---
@@ -273,9 +243,12 @@ if page == "Dashboard":
             role_icon = "⭐" if m['is_rep'] else "👤"
             st.markdown(f"{role_icon} **{m['name']}**")
             st.caption(f"Focus: {m['sub_role']}")
-    
-# --- ATTENDANCE ---
-elif page == "Attendance":
+    st.title(f"🚀 {view_proj} Dashboard")
+    # ... (the stat cards, the RSVP form, etc.)
+
+# --- ATTENDANCE TAB ---
+with active_tab[1]:
+    elif page == "Attendance":
     st.title("✅ Attendance")
     evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
     if evs:
@@ -298,9 +271,70 @@ elif page == "Attendance":
                 c2.write("✅" if rec["p"] else "❌")
                 c3.write(rec["d"])
         if can_mark and st.button("Save Attendance"): save_data(); st.success("Updated in Database")
+    st.title("📝 Attendance Tracker")
+    # ...
 
-# --- CONTRIBUTION TRACKER ---
-elif page == "Contribution Tracker":
+# --- ACTIVITY LOG TAB ---
+with active_tab[2]:
+    st.title("🕒 Activity Log")
+    st.info("Submit your hours here. The Chairman will verify these for VIA records.")
+
+    # 1. FORM TO SUBMIT NEW LOG
+    with st.expander("➕ Log New Activity", expanded=True):
+        with st.form("log_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                log_date = st.date_input("Date of Activity", value=date.today())
+                log_hours = st.number_input("Minutes spent", min_value=5, step=5, help="Enter total minutes")
+            with col2:
+                log_task = st.text_input("What did you do?", placeholder="e.g. Painted the backdrop")
+                log_proj = st.selectbox("Project", ["SKIT", "BROCHURE"])
+            
+            if st.form_submit_button("Submit Log"):
+                new_entry = {
+                    "user": c_name,
+                    "date": str(log_date),
+                    "minutes": log_hours,
+                    "task": log_task,
+                    "project": log_proj,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                }
+                
+                # Save to st.session_state
+                if "logs" not in st.session_state.data:
+                    st.session_state.data["logs"] = []
+                st.session_state.data["logs"].append(new_entry)
+                
+                # Update total contributions
+                contribs = st.session_state.data.get("contributions", {})
+                contribs[c_name] = contribs.get(c_name, 0) + log_hours
+                st.session_state.data["contributions"] = contribs
+                
+                save_data()
+                st.success("Activity logged successfully!")
+                st.rerun()
+
+    st.markdown("---")
+
+    # 2. VIEW PREVIOUS LOGS
+    st.subheader("📜 Your Recent Entries")
+    
+    # Filter logs for the current user and selected project
+    all_logs = st.session_state.data.get("logs", [])
+    user_logs = [l for l in all_logs if l.get("user") == c_name and l.get("project") == view_proj]
+
+    if not user_logs:
+        st.write("No logs found for this project yet.")
+    else:
+        # Convert to DataFrame for a nice table look
+        df_logs = pd.DataFrame(user_logs)
+        # Clean up column names for display
+        df_logs = df_logs[["date", "minutes", "task"]].sort_values(by="date", ascending=False)
+        st.table(df_logs)
+
+# --- CONTRIBUTION TRACKER TAB ---
+with active_tab[3]:
+    elif page == "Contribution Tracker":
     st.title("⏳ Time Management")
     if is_chair or (is_skit_rep and view_proj=="SKIT") or (is_broch_rep and view_proj=="BROCHURE"):
         st.subheader("Add Contribution")
@@ -319,6 +353,15 @@ elif page == "Contribution Tracker":
     sum_list = [{"Name": m["name"], "Total": f"{st.session_state.data['contributions'].get(m['name'],0)//60}h {st.session_state.data['contributions'].get(m['name'],0)%60}m"} 
                for m in st.session_state.data["members"] if m["project"] == view_proj]
     if sum_list: st.table(pd.DataFrame(sum_list))
+    st.title("📊 Progress Tracker")
+    # ...
+
+# --- ADMIN TAB ---
+if c_role == "Chairman":
+    with active_tab[4]:
+        # PASTE ALL YOUR MANAGEMENT CENTER CODE HERE
+        st.title("⚙️ Admin Control")
+        # ...
 
 # --- MANAGEMENT CENTER ---
 elif page == "Management Center" and is_chair:
