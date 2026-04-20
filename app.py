@@ -466,35 +466,51 @@ if is_chair:
         ])
         
         with at1:
-            st.subheader("➕ Add Member")
-        
-            with st.form("add_member_form"):
-                cn, cp = st.columns(2)
-                n = cn.text_input("Name")
-                p = cp.selectbox("Project", ["SKIT", "BROCHURE"])
-        
-                cr, cs = st.columns(2)
-                r = cr.checkbox("Rep?")
-                s = cs.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"])
-        
-                if st.form_submit_button("Add Member"):
-                    if not n.strip():
-                        st.error("Name cannot be empty")
-                    else:
-                        st.session_state.data["members"].append({
-                            "name": n,
-                            "project": p,
-                            "is_rep": r,
-                            "sub_role": s
-                        })
-        
-                        log_system_event(f"Added member: {n} ({p}, {s})", c_name)
-        
-                        save_data()
-                        st.rerun()
-        
-        st.divider()
-        st.subheader("🗑️ Remove Members")
+    st.subheader("➕ Add Member")
+
+    with st.form("add_member_form"):
+        cn, cp = st.columns(2)
+        n = cn.text_input("Name")
+        p = cp.selectbox("Project", ["SKIT", "BROCHURE"])
+
+        cr, cs = st.columns(2)
+        r = cr.checkbox("Rep?")
+        s = cs.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"])
+
+        if st.form_submit_button("Add Member"):
+            if not n.strip():
+                st.error("Name cannot be empty")
+            else:
+                st.session_state.data["members"].append({
+                    "name": n,
+                    "project": p,
+                    "is_rep": r,
+                    "sub_role": s
+                })
+
+                log_system_event(f"Added member: {n} ({p}, {s})", c_name)
+                save_data()
+                st.rerun()
+
+    st.divider()
+    st.subheader("🗑️ Remove Members")
+
+    for i, m in enumerate(st.session_state.data.get("members", [])):
+        with st.container(border=True):
+            c1, c2 = st.columns([4, 1])
+
+            c1.write(f"**{m['name']}** ({m['project']})")
+            c1.caption(f"Role: {m['sub_role']}")
+
+            if c2.button("🗑️ Delete", key=f"del_member_{i}"):
+                log_system_event(
+                    f"Deleted member: {m['name']} ({m['project']})",
+                    c_name
+                )
+
+                st.session_state.data["members"].pop(i)
+                save_data()
+                st.rerun()
         
         for m in st.session_state.data.get("members", []):
             with st.container(border=True):
