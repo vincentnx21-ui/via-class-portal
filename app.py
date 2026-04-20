@@ -604,16 +604,7 @@ if is_chair:
         with at5:
             st.subheader("🚨 Danger Zone")
             st.divider()
-            st.subheader("🖥️ System Activity Terminal")
-            
-            logs = st.session_state.data.get("system_logs", [])
-            
-            if not logs:
-                st.info("No system activity yet.")
-            else:
-                for entry in reversed(logs[-50:]):  # last 50 logs
-                    st.code(f"[{entry['time']}] {entry['user']} → {entry['action']}", language="bash")
-                    
+
             st.warning("This will permanently wipe all hour contributions and the activity log history.")
             
             # Confirmation step to prevent accidental clicks
@@ -631,11 +622,12 @@ if is_chair:
                     
         with at6:
             st.subheader("🖥️ System Activity Terminal")
-        
+            
             logs = st.session_state.data.get("system_logs", [])
-        
+            
             if not logs:
                 st.info("No system activity yet.")
             else:
-                for entry in reversed(logs[-50:]):
+                for entry in reversed(logs[-50:]):  # last 50 logs
                     st.code(f"[{entry['time']}] {entry['user']} → {entry['action']}", language="bash")
+                    
