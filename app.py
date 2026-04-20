@@ -62,6 +62,31 @@ def load_data():
         return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}}
 
 def save_data():
+    def generate_event_reports():
+    today = date.today()
+    logs = st.session_state.data.setdefault("logs", [])
+
+    for e in st.session_state.data.get("events", []):
+
+        try:
+            event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+        except:
+            continue
+
+        if event_date <= today:
+            log_id = f"auto_{e['project']}_{e['date']}_{e['start_time']}"
+
+            if not any(l.get("log_id") == log_id for l in logs):
+                logs.append({
+                    "log_id": log_id,
+                    "user": "SYSTEM",
+                    "date": str(event_date),
+                    "minutes": 0,
+                    "task": f"AUTO REPORT: {e['type']} completed",
+                    "project": e["project"],
+                    "comments": []
+                })
+    
     try:
         ref = db.reference("via_master_record")
         data_copy = st.session_state.data.copy()
@@ -82,6 +107,7 @@ def save_data():
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
+generate_event_reports()
     st.session_state._migrated = True
 
     for log in st.session_state.data.get("logs", []):
@@ -285,12 +311,18 @@ with active_tab[2]:
     for log in reversed(proj_logs):
         with st.container(border=True):
 
-            ct, cs = st.columns([3, 1])
-            ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
-            cs.info(f"{log['minutes']} mins")
+        is_system = log.get("user") == "SYSTEM"
 
-            # 🗑️ & ✏️ LOG CONTROLS (teacher only)
-            if is_teach:
+        ct, cs = st.columns([3, 1])
+        ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
+        cs.info(f"{log['minutes']} mins")
+
+        # 🔒 system notice
+        if is_system:
+            st.caption("🔒 System-generated report")
+
+        # 🗑️ EDIT/DELETE ONLY IF NOT SYSTEM
+        if is_teach and not is_system:
                 col1, col2 = st.columns(2)
 
                 if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
