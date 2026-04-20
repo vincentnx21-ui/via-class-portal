@@ -63,29 +63,29 @@ def load_data():
 
 def save_data():
     def generate_event_reports():
-    today = date.today()
-    logs = st.session_state.data.setdefault("logs", [])
+        today = date.today()
+        logs = st.session_state.data.setdefault("logs", [])
 
-    for e in st.session_state.data.get("events", []):
-
-        try:
-            event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
-        except:
-            continue
-
-        if event_date <= today:
-            log_id = f"auto_{e['project']}_{e['date']}_{e['start_time']}"
-
-            if not any(l.get("log_id") == log_id for l in logs):
-                logs.append({
-                    "log_id": log_id,
-                    "user": "SYSTEM",
-                    "date": str(event_date),
-                    "minutes": 0,
-                    "task": f"AUTO REPORT: {e['type']} completed",
-                    "project": e["project"],
-                    "comments": []
-                })
+        for e in st.session_state.data.get("events", []):
+    
+            try:
+                event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+            except:
+                continue
+    
+            if event_date <= today:
+                log_id = f"auto_{e['project']}_{e['date']}_{e['start_time']}"
+    
+                if not any(l.get("log_id") == log_id for l in logs):
+                    logs.append({
+                        "log_id": log_id,
+                        "user": "SYSTEM",
+                        "date": str(event_date),
+                        "minutes": 0,
+                        "task": f"AUTO REPORT: {e['type']} completed",
+                        "project": e["project"],
+                        "comments": []
+                    })
     
     try:
         ref = db.reference("via_master_record")
