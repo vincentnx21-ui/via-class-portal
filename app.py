@@ -186,11 +186,12 @@ with active_tab[0]:
     col_c.metric("Project Status", "Active", delta="On Track")
 
     # Main Dashboard Content
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([3, 1])  # wider event section
     
     with col1:
-        st.subheader("📅 Event RSVP")
-    # Separate events into 'Current' and 'History'
+    st.subheader("📅 Event RSVP")
+
+    # ✅ MOVE EVERYTHING BELOW INSIDE col1
     all_events = st.session_state.data.get("events", [])
     today = date.today()
     
@@ -198,48 +199,42 @@ with active_tab[0]:
     history_events = []
 
     for e in all_events:
-        # Convert date string to date object for comparison if it's a string [cite: 9]
         event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
-        
-        # Logic: History if Cancelled OR if the date has passed [cite: 29, 104]
+
         if e.get("status") == "Cancelled" or event_date < today:
             history_events.append(e)
         else:
             current_events.append(e)
 
-    # --- DISPLAY CURRENT EVENTS ---
+    # --- CURRENT EVENTS ---
     if not current_events:
         st.info("No upcoming events.")
     else:
         for i, e in enumerate(current_events):
-            e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
             with st.container(border=True):
-                st.write(f"**{e['type']}**") 
-                st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") 
-                
-                # RSVP Logic (Existing code) [cite: 32, 34, 35]
+                st.write(f"**{e['type']}**")
+                st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}")
+
                 with st.expander("Update My RSVP"):
-                    # ... your existing RSVP form code ...
                     pass
 
-    # --- NEW: DISPLAY EVENT HISTORY ---
+    # --- HISTORY ---
     st.divider()
     st.subheader("📜 Event History")
+
     if not history_events:
         st.caption("No past or cancelled events.")
     else:
-        for e in reversed(history_events): # Show newest history first
+        for e in reversed(history_events):
             event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
-            is_past = event_date < today
-            
+
             with st.container(border=True):
                 if e.get("status") == "Cancelled":
-                    st.error(f"🚫 **CANCELLED: {e['type']}**") 
-                    if e.get("note"): st.caption(f"**Reason for cancellation:** {e['note']}") 
-                elif is_past:
+                    st.error(f"🚫 **CANCELLED: {e['type']}**")
+                else:
                     st.success(f"✅ **COMPLETED: {e['type']}**")
-                
-                st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}") 
+
+                st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
                 
     with col2:
         st.subheader("👥 Team Roster")
