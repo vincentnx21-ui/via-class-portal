@@ -84,6 +84,7 @@ def generate_event_reports():
                     "project": e["project"],
                     "comments": []
                 })
+                
 def save_data():
     try:
         ref = db.reference("via_master_record")
@@ -144,6 +145,7 @@ if not st.session_state.authenticated:
             else: st.error("Access Denied")
 
             if st.session_state.authenticated:
+                log_system_event("Logged in", name_in)
                 acc_list = st.session_state.data.get("accounts", [])
                 if not any(a['name'] == name_in for a in acc_list):
                     st.session_state.data["accounts"].append({"name": name_in, "role": st.session_state.u_role})
@@ -165,7 +167,9 @@ if st.sidebar.button("🔓 Logout", use_container_width=True):
 
 # --- 6. TABS DEFINITION ---
 tabs_list = ["🏠 Dashboard", "✅ Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
-if is_chair: tabs_list.append("⚙️ Admin")
+if is_chair:
+    tabs_list.append("⚙️ Admin")
+
 active_tab = st.tabs(tabs_list)
 
 # --- TAB 0: DASHBOARD ---
@@ -283,6 +287,7 @@ with active_tab[2]:
                 lp = st.selectbox("Project", ["SKIT", "BROCHURE"], index=0 if view_proj=="SKIT" else 1)
 
                 if st.form_submit_button("Submit"):
+                    log_system_event(f"Added log: {lt}", c_name)
                     st.session_state.data["logs"].append({
                         "log_id": f"log_{datetime.now().timestamp()}",
                         "user": c_name,
@@ -306,9 +311,9 @@ with active_tab[2]:
 
             is_system = log.get("user") == "SYSTEM"
 
-        ct, cs = st.columns([3, 1])
-        ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
-        cs.info(f"{log['minutes']} mins")
+            ct, cs = st.columns([3, 1])
+            ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
+            cs.info(f"{log['minutes']} mins")
 
         # 🔒 system notice
         if is_system:
@@ -319,6 +324,8 @@ with active_tab[2]:
             col1, col2 = st.columns(2)
 
             if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
+                log_system_event(f"Deleted activity: {log['task']}", c_name)
+            
                 st.session_state.data["logs"] = [
                     l for l in st.session_state.data["logs"]
                     if l.get("log_id") != log["log_id"]
@@ -332,6 +339,7 @@ with active_tab[2]:
                     new_minutes = st.number_input("Minutes", value=log["minutes"], step=5)
 
                     if st.form_submit_button("Save"):
+                        log_system_event(f"Edited comment: {c.get('text','')[:30]}", c_name)
                         for l in st.session_state.data["logs"]:
                             if l.get("log_id") == log["log_id"]:
                                 l["task"] = new_task
@@ -352,6 +360,7 @@ with active_tab[2]:
                 action_col1, action_col2, _ = st.columns([1, 1, 6])
 
                 if action_col1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
+                    log_system_event(f"Deleted comment: {c.get('text','')[:30]}", c_name)
                     log["comments"] = [
                         x for x in log["comments"]
                         if x.get("comment_id") != comment_id
@@ -436,17 +445,58 @@ if is_chair:
     with active_tab[5]:
         st.title("⚙️ Chairman Master Control")
         # Update: Added "⚠️ Reset" to the tab list
-        at1, at2, at3, at4, at5 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections", "⚠️ Reset"])
+        at1, at2, at3, at4, at5, at6 = st.tabs([
+            "👥 Roster",
+            "📅 Events",
+            "🔐 Accounts",
+            "⚖️ Corrections",
+            "⚠️ Reset",
+            "🖥️ Terminal"
+        ])
         
         with at1:
-            with st.form("add_m"):
+            st.subheader("➕ Add Member")
+        
+            with st.form("add_member_form"):
                 cn, cp = st.columns(2)
-                n, p = cn.text_input("Name"), cp.selectbox("Project", ["SKIT", "BROCHURE"])
+                n = cn.text_input("Name")
+                p = cp.selectbox("Project", ["SKIT", "BROCHURE"])
+        
                 cr, cs = st.columns(2)
-                r, s = cr.checkbox("Rep?"), cs.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"])
+                r = cr.checkbox("Rep?")
+                s = cs.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"])
+        
                 if st.form_submit_button("Add Member"):
-                    st.session_state.data["members"].append({"name": n, "project": p, "is_rep": r, "sub_role": s})
-                    save_data(); st.rerun()
+                    if not n.strip():
+                        st.error("Name cannot be empty")
+                    else:
+                        st.session_state.data["members"].append({
+                            "name": n,
+                            "project": p,
+                            "is_rep": r,
+                            "sub_role": s
+                        })
+        
+                        log_system_event(f"Added member: {n} ({p}, {s})", c_name)
+        
+                        save_data()
+                        st.rerun()
+        
+            st.divider()
+            st.subheader("🗑️ Remove Members")
+        
+        for i, m in enumerate(st.session_state.data.get("members", [])):
+            with st.container(border=True):
+                c1, c2 = st.columns([4, 1])
+        
+                c1.write(f"**{m['name']}** ({m['project']})")
+                c1.caption(f"Role: {m['sub_role']}")
+        
+                if c2.button("🗑️ Delete", key=f"del_member_{i}"):
+                    log_system_event(f"Deleted member: {m['name']} ({m['project']})", c_name)
+        
+                    save_data()
+                    st.rerun()
 
         with at2:
             st.subheader("🗓️ Manage Events")
@@ -455,6 +505,7 @@ if is_chair:
                 ep, ty, d = st.selectbox("Project", ["SKIT", "BROCHURE"]), st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session", "Production Day"]), st.date_input("Date")
                 st_time, v = st.time_input("Start"), st.text_input("Venue")
                 if st.form_submit_button("Add Event"):
+                    log_system_event(f"Created event: {ty}", c_name)
                     st.session_state.data["events"].append({
                         "project": ep, "type": ty, "date": str(d), 
                         "venue": v, "start_time": str(st_time), "status": "Active"
@@ -474,6 +525,13 @@ if is_chair:
                     
                     # DELETE BUTTON
                     if c2.button("🗑️ Delete", key=f"del_ev_{i}"):
+
+                        # log BEFORE deleting (important so data still exists)
+                        log_system_event(
+                            f"{c_role} {c_name} deleted event '{ev['type']}' on {ev['date']}",
+                            c_name
+                        )
+                    
                         st.session_state.data["events"].pop(i)
                         save_data()
                         st.rerun()
@@ -489,10 +547,13 @@ if is_chair:
                                                  index=0 if ev.get("status") == "Active" else 1)
                             
                             if st.form_submit_button("Save Changes"):
+                                log_system_event(f"Edited event: {ev['type']} → {new_type}", c_name)
+                            
                                 st.session_state.data["events"][i]["type"] = new_type
                                 st.session_state.data["events"][i]["venue"] = new_venue
                                 st.session_state.data["events"][i]["note"] = new_note
                                 st.session_state.data["events"][i]["status"] = new_stat
+                            
                                 save_data()
                                 st.rerun()
 
@@ -521,6 +582,17 @@ if is_chair:
         # --- NEW RESET LOGIC ---
         with at5:
             st.subheader("🚨 Danger Zone")
+            st.divider()
+            st.subheader("🖥️ System Activity Terminal")
+            
+            logs = st.session_state.data.get("system_logs", [])
+            
+            if not logs:
+                st.info("No system activity yet.")
+            else:
+                for entry in reversed(logs[-50:]):  # last 50 logs
+                    st.code(f"[{entry['time']}] {entry['user']} → {entry['action']}", language="bash")
+                    
             st.warning("This will permanently wipe all hour contributions and the activity log history.")
             
             # Confirmation step to prevent accidental clicks
@@ -535,3 +607,14 @@ if is_chair:
                     st.rerun()
                 else:
                     st.error("You must type 'RESET' to confirm.")
+                    
+        with at6:
+            st.subheader("🖥️ System Activity Terminal")
+        
+            logs = st.session_state.data.get("system_logs", [])
+        
+            if not logs:
+                st.info("No system activity yet.")
+            else:
+                for entry in reversed(logs[-50:]):
+                    st.code(f"[{entry['time']}] {entry['user']} → {entry['action']}", language="bash")
