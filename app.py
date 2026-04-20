@@ -99,6 +99,7 @@ def save_data():
                     e_c["end_time"] = e["end_time"].strftime("%H:%M") if hasattr(e["end_time"], 'strftime') else e["end_time"]
                 serializable_events.append(e_c)
             data_copy["events"] = serializable_events
+            data_copy["system_logs"] = st.session_state.data.get("system_logs", [])
         ref.set(data_copy)
     except Exception as e:
         st.error(f"Save Error: {e}")
@@ -112,7 +113,7 @@ def log_system_event(action, user):
         "user": user,
         "action": action
     })
-
+    
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
@@ -349,7 +350,7 @@ with active_tab[2]:
                     new_minutes = st.number_input("Minutes", value=log["minutes"], step=5)
 
                     if st.form_submit_button("Save"):
-                        log_system_event(f"Edited comment: {c.get('text','')[:30]}", c_name)
+                        log_system_event(f"Edited activity: {log['task']}", c_name)
                         for l in st.session_state.data["logs"]:
                             if l.get("log_id") == log["log_id"]:
                                 l["task"] = new_task
@@ -492,18 +493,27 @@ if is_chair:
                         save_data()
                         st.rerun()
         
-            st.divider()
-            st.subheader("🗑️ Remove Members")
+        st.divider()
+        st.subheader("🗑️ Remove Members")
         
-        for i, m in enumerate(st.session_state.data.get("members", [])):
+        for m in st.session_state.data.get("members", []):
             with st.container(border=True):
                 c1, c2 = st.columns([4, 1])
         
                 c1.write(f"**{m['name']}** ({m['project']})")
                 c1.caption(f"Role: {m['sub_role']}")
         
-                if c2.button("🗑️ Delete", key=f"del_member_{i}"):
-                    log_system_event(f"Deleted member: {m['name']} ({m['project']})", c_name)
+                if c2.button("🗑️ Delete", key=f"del_member_{m['name']}_{m['project']}"):
+        
+                    log_system_event(
+                        f"Deleted member: {m['name']} ({m['project']})",
+                        c_name
+                    )
+        
+                    st.session_state.data["members"] = [
+                        x for x in st.session_state.data["members"]
+                        if not (x["name"] == m["name"] and x["project"] == m["project"])
+                    ]
         
                     save_data()
                     st.rerun()
