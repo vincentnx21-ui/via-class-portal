@@ -108,7 +108,7 @@ if "data" not in st.session_state:
     st.session_state.data = load_data()
 
 generate_event_reports()
-    st.session_state._migrated = True
+st.session_state._migrated = True
 
     for log in st.session_state.data.get("logs", []):
         for c in log.get("comments", []):
