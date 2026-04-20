@@ -103,6 +103,16 @@ def save_data():
     except Exception as e:
         st.error(f"Save Error: {e}")
 
+def log_system_event(action, user):
+    if "system_logs" not in st.session_state.data:
+        st.session_state.data["system_logs"] = []
+
+    st.session_state.data["system_logs"].append({
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "user": user,
+        "action": action
+    })
+
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
