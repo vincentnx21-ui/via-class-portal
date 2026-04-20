@@ -495,6 +495,7 @@ if is_chair:
             st.divider()
             st.subheader("🗑️ Remove Members")
         
+            # ✅ THIS MUST ALSO BE INSIDE at1
             for i, m in enumerate(st.session_state.data.get("members", [])):
                 with st.container(border=True):
                     c1, c2 = st.columns([4, 1])
