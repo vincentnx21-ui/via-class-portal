@@ -315,37 +315,45 @@ with active_tab[2]:
                             save_data()
                             st.rerun()
 
-            # 💬 COMMENTS
+            # 💬 COMMENTS (INSIDE LOG LOOP)
             for c in log.get("comments", []):
-
+            
                 comment_id = c.get("comment_id")
-
-                st.markdown(f"**{c.get('teacher', 'Unknown')}**")
+                teacher_name = c.get("teacher", "Unknown")
+            
+                st.markdown(f"**{teacher_name}**")
                 st.write(c.get("text", ""))
-
-                if is_teach and comment_id:
-
-                    c1, c2 = st.columns(2)
-
-                    # 🗑️ DELETE COMMENT
-                    if c1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
+            
+                # 👇 ONLY SHOW CONTROLS IF:
+                # - user is teacher
+                # - AND they own the comment
+                if is_teach and teacher_name == c_name and comment_id:
+            
+                    action_col1, action_col2, _ = st.columns([1, 1, 6])
+            
+                    # 🗑️ DELETE OWN COMMENT ONLY
+                    if action_col1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
                         log["comments"] = [
                             x for x in log["comments"]
                             if x.get("comment_id") != comment_id
                         ]
                         save_data()
                         st.rerun()
-
-                    # ✏️ EDIT COMMENT
-                    with c2.expander("✏️ Edit"):
+            
+                    # ✏️ EDIT OWN COMMENT ONLY
+                    with action_col2.expander("✏️ Edit"):
                         with st.form(f"edit_c_{comment_id}"):
-                            new_text = st.text_area("Edit comment", value=c.get("text", ""))
-
+            
+                            new_text = st.text_area(
+                                "Edit your feedback",
+                                value=c.get("text", "")
+                            )
+            
                             if st.form_submit_button("Save"):
                                 for x in log["comments"]:
                                     if x.get("comment_id") == comment_id:
                                         x["text"] = new_text
-
+            
                                 save_data()
                                 st.rerun()
                             
