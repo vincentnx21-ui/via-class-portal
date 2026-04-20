@@ -188,7 +188,7 @@ with active_tab[0]:
         st.info("No upcoming events.")
     else:
         for i, e in enumerate(current_events):
-            e_id = f"{e['project']}_{e['date']}_{e['start_time']}" [cite: 33]
+            e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
             with st.container(border=True):
                 st.write(f"**{e['type']}**") [cite: 30]
                 st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") [cite: 31]
