@@ -11,20 +11,28 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 
 # --- CUSTOM CSS ---
 st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    button[data-baseweb="tab"] {
-        font-size: 18px; font-weight: bold; color: #1e293b;
-        background-color: #e2e8f0; border-radius: 10px 10px 0px 0px;
-        padding: 10px 20px; margin-right: 5px; transition: 0.3s;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #1e293b !important; color: white !important;
-        border-bottom: 3px solid #007bff;
-    }
-    div[data-plugin="stTabs"] div[role="tablist"] { border-bottom: none; gap: 0px; }
-    button[data-baseweb="tab"]:hover { background-color: #cbd5e1; }
-    </style>
+<style>
+.block-container {
+    padding-top: 2rem;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    gap: 10px;
+}
+
+div[data-testid="stContainer"] {
+    border-radius: 12px;
+}
+
+.stButton>button {
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.stButton>button:hover {
+    transform: scale(1.02);
+}
+</style>
     """, unsafe_allow_html=True)
 
 # --- 2. FIREBASE INITIALIZATION ---
@@ -46,26 +54,49 @@ def load_data():
     try:
         ref = db.reference("via_master_record")
         data = ref.get()
+
         if data:
             if "events" in data:
                 for event in data["events"]:
                     try:
+                        # DATE
                         if isinstance(event.get("date"), str):
                             event["date"] = datetime.fromisoformat(event["date"]).date()
-                
+
+                        # TIME
                         if isinstance(event.get("start_time"), str):
                             event["start_time"] = datetime.strptime(event["start_time"], "%H:%M").time()
-                
+
                         if "end_time" in event and isinstance(event.get("end_time"), str):
                             event["end_time"] = datetime.strptime(event["end_time"], "%H:%M").time()
-                
+
                     except Exception as err:
                         print("Event parsing error:", err)
                         continue
+
             return data
-        return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}}
+
+        return {
+            "members": [],
+            "accounts": [],
+            "logs": [],
+            "contributions": {},
+            "events": [],
+            "rsvp": [],
+            "attendance": {}
+        }
+
     except Exception as e:
-        return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}}
+        print("Load error:", e)
+        return {
+            "members": [],
+            "accounts": [],
+            "logs": [],
+            "contributions": {},
+            "events": [],
+            "rsvp": [],
+            "attendance": {}
+        }
 
 def generate_event_reports():
     today = date.today()
@@ -95,20 +126,32 @@ def save_data():
     try:
         ref = db.reference("via_master_record")
         data_copy = st.session_state.data.copy()
+
         if "events" in data_copy:
             serializable_events = []
+
             for e in data_copy["events"]:
-                e_c = e.copy()
-                e_c["date"] = e["date"].isoformat() if hasattr(e["date"], 'isoformat') else e["date"]
-                e_c["start_time"] = e["start_time"].strftime("%H:%M") if hasattr(e["start_time"], 'strftime') else e["start_time"]
-                if "end_time" in e_c:
-                    e_c["end_time"] = e["end_time"].strftime("%H:%M") if hasattr(e["end_time"], 'strftime') else e["end_time"]
-                serializable_events.append(e_c)
+                e_copy = e.copy()
+
+                if hasattr(e_copy["date"], "isoformat"):
+                    e_copy["date"] = e_copy["date"].isoformat()
+
+                if hasattr(e_copy["start_time"], "strftime"):
+                    e_copy["start_time"] = e_copy["start_time"].strftime("%H:%M")
+
+                if "end_time" in e_copy and hasattr(e_copy["end_time"], "strftime"):
+                    e_copy["end_time"] = e_copy["end_time"].strftime("%H:%M")
+
+                serializable_events.append(e_copy)
+
             data_copy["events"] = serializable_events
-            data_copy["system_logs"] = st.session_state.data.get("system_logs", [])
+
+        data_copy["system_logs"] = st.session_state.data.get("system_logs", [])
+
         ref.set(data_copy)
+
     except Exception as e:
-        st.error(f"Save Error: {e}")
+        print("Save error:", e)
 
 def log_system_event(action, user):
     if "system_logs" not in st.session_state.data:
@@ -216,17 +259,24 @@ with active_tab[0]:
         all_events = st.session_state.data.get("events", [])
         today = date.today()
         
-        current_events = []
-        history_events = []
-    
-        for e in all_events:
-            event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
-    
-            if e.get("status") == "Cancelled" or event_date < today:
-                history_events.append(e)
-            else:
-                current_events.append(e)
+current_events = []
+history_events = []
 
+for e in all_events:
+    try:
+        event_date = e.get("date")
+
+        if isinstance(event_date, str):
+            event_date = datetime.fromisoformat(event_date).date()
+
+        if e.get("status") == "Cancelled" or event_date < today:
+            history_events.append(e)
+        else:
+            current_events.append(e)
+
+    except:
+        continue
+        
         # --- CURRENT EVENTS ---
         if not current_events:
             st.info("No upcoming events.")
@@ -528,8 +578,12 @@ if is_chair:
                 if st.form_submit_button("Add Event"):
                     log_system_event(f"Created event: {ty}", c_name)
                     st.session_state.data["events"].append({
-                        "project": ep, "type": ty, "date": d.isoformat(), 
-                        "venue": v, "start_time": str(st_time), "status": "Active"
+                        "project": ep,
+                        "type": ty,
+                        "date": d.isoformat(),              # stored as string
+                        "venue": v,
+                        "start_time": st_time.strftime("%H:%M"),   # FIXED
+                        "status": "Active"
                     })
                     save_data(); st.rerun()
 
