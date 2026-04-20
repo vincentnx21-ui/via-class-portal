@@ -190,8 +190,8 @@ with active_tab[0]:
         for i, e in enumerate(current_events):
             e_id = f"{e['project']}_{e['date']}_{e['start_time']}"
             with st.container(border=True):
-                st.write(f"**{e['type']}**") [cite: 30]
-                st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") [cite: 31]
+                st.write(f"**{e['type']}**") 
+                st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}") 
                 
                 # RSVP Logic (Existing code) [cite: 32, 34, 35]
                 with st.expander("Update My RSVP"):
@@ -210,12 +210,12 @@ with active_tab[0]:
             
             with st.container(border=True):
                 if e.get("status") == "Cancelled":
-                    st.error(f"🚫 **CANCELLED: {e['type']}**") [cite: 29]
-                    if e.get("note"): st.caption(f"**Reason for cancellation:** {e['note']}") [cite: 29]
+                    st.error(f"🚫 **CANCELLED: {e['type']}**") 
+                    if e.get("note"): st.caption(f"**Reason for cancellation:** {e['note']}") 
                 elif is_past:
                     st.success(f"✅ **COMPLETED: {e['type']}**")
                 
-                st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}") [cite: 104]
+                st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}") 
                 
     with col2:
         st.subheader("👥 Team Roster")
