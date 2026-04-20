@@ -48,14 +48,20 @@ def load_data():
         data = ref.get()
         if data:
             if "events" in data:
-                for e in data["events"]:
+                for event in data["events"]:
                     try:
-                        e["date"] = datetime.strptime(e["date"], "%Y-%m-%d").date()
-                        e["start_time"] = datetime.strptime(e["start_time"], "%H:%M").time()
-                        if "end_time" in e:
-                             e["end_time"] = datetime.strptime(e["end_time"], "%H:%M").time()
-                    except: 
-                        continue # Fixed the syntax error here
+                        if isinstance(event.get("date"), str):
+                            event["date"] = datetime.fromisoformat(event["date"]).date()
+                
+                        if isinstance(event.get("start_time"), str):
+                            event["start_time"] = datetime.strptime(event["start_time"], "%H:%M").time()
+                
+                        if "end_time" in event and isinstance(event.get("end_time"), str):
+                            event["end_time"] = datetime.strptime(event["end_time"], "%H:%M").time()
+                
+                    except Exception as err:
+                        print("Event parsing error:", err)
+                        continue
             return data
         return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}}
     except Exception as e:
@@ -67,7 +73,7 @@ def generate_event_reports():
 
     for e in st.session_state.data.get("events", []):
         try:
-            event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+            event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
         except:
             continue
 
@@ -214,7 +220,7 @@ with active_tab[0]:
         history_events = []
     
         for e in all_events:
-            event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+            event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
     
             if e.get("status") == "Cancelled" or event_date < today:
                 history_events.append(e)
@@ -241,7 +247,7 @@ with active_tab[0]:
             st.caption("No past or cancelled events.")
         else:
             for e in reversed(history_events):
-                event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+                event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
     
                 with st.container(border=True):
                     if e.get("status") == "Cancelled":
@@ -512,28 +518,6 @@ if is_chair:
                         st.session_state.data["members"].pop(i)
                         save_data()
                         st.rerun()
-        
-        for m in st.session_state.data.get("members", []):
-            with st.container(border=True):
-                c1, c2 = st.columns([4, 1])
-        
-                c1.write(f"**{m['name']}** ({m['project']})")
-                c1.caption(f"Role: {m['sub_role']}")
-        
-                if c2.button("🗑️ Delete", key=f"del_member_{m['name']}_{m['project']}"):
-        
-                    log_system_event(
-                        f"Deleted member: {m['name']} ({m['project']})",
-                        c_name
-                    )
-        
-                    st.session_state.data["members"] = [
-                        x for x in st.session_state.data["members"]
-                        if not (x["name"] == m["name"] and x["project"] == m["project"])
-                    ]
-        
-                    save_data()
-                    st.rerun()
 
         with at2:
             st.subheader("🗓️ Manage Events")
@@ -544,7 +528,7 @@ if is_chair:
                 if st.form_submit_button("Add Event"):
                     log_system_event(f"Created event: {ty}", c_name)
                     st.session_state.data["events"].append({
-                        "project": ep, "type": ty, "date": str(d), 
+                        "project": ep, "type": ty, "date": d.isoformat(), 
                         "venue": v, "start_time": str(st_time), "status": "Active"
                     })
                     save_data(); st.rerun()
