@@ -603,7 +603,6 @@ if is_chair:
         # --- NEW RESET LOGIC ---
         with at5:
             st.subheader("🚨 Danger Zone")
-            st.divider()
 
             st.warning("This will permanently wipe all hour contributions and the activity log history.")
             
