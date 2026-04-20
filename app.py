@@ -252,31 +252,47 @@ with active_tab[1]:
                     col3.write(rec["d"])
             if (is_chair or is_teach) and st.button("Save Attendance"): save_data(); st.success("Saved!")
 
-# --- TAB 2: ACTIVITY LOG & TEACHER FEEDBACK ---
 with active_tab[2]:
     st.title("🕒 Activity Log")
+
     if is_chair or is_rep:
         with st.expander("➕ Log New Activity"):
             with st.form(f"log_{view_proj}"):
-                ld, lm, lt = st.date_input("Date"), st.number_input("Minutes", 5, step=5), st.text_input("Task")
+                ld = st.date_input("Date")
+                lm = st.number_input("Minutes", 5, step=5)
+                lt = st.text_input("Task")
                 lp = st.selectbox("Project", ["SKIT", "BROCHURE"], index=0 if view_proj=="SKIT" else 1)
+
                 if st.form_submit_button("Submit"):
-                    st.session_state.data["logs"].append({"log_id": f"log_{datetime.now().strftime('%Y%m%d%H%M%S')}", "user": c_name, "date": str(ld), "minutes": lm, "task": lt, "project": lp, "comments": []})
-                    save_data(); st.success("Logged!"); st.rerun()
-    
+                    st.session_state.data["logs"].append({
+                        "log_id": f"log_{datetime.now().timestamp()}",
+                        "user": c_name,
+                        "date": str(ld),
+                        "minutes": lm,
+                        "task": lt,
+                        "project": lp,
+                        "comments": []
+                    })
+                    save_data()
+                    st.success("Logged!")
+                    st.rerun()
+
     st.divider()
     st.subheader("📜 Recent Activity & Teacher Feedback")
+
     proj_logs = [l for l in st.session_state.data.get("logs", []) if l.get("project") == view_proj]
+
     for log in reversed(proj_logs):
         with st.container(border=True):
+
             ct, cs = st.columns([3, 1])
             ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
             cs.info(f"{log['minutes']} mins")
 
+            # 🗑️ & ✏️ LOG CONTROLS (teacher only)
             if is_teach:
                 col1, col2 = st.columns(2)
-    
-                # 🗑️ DELETE BUTTON
+
                 if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
                     st.session_state.data["logs"] = [
                         l for l in st.session_state.data["logs"]
@@ -284,55 +300,55 @@ with active_tab[2]:
                     ]
                     save_data()
                     st.rerun()
-    
-                # ✏️ EDIT BUTTON
+
                 with col2.expander("✏️ Edit"):
                     with st.form(f"edit_{log['log_id']}"):
                         new_task = st.text_input("Task", value=log["task"])
                         new_minutes = st.number_input("Minutes", value=log["minutes"], step=5)
-    
+
                         if st.form_submit_button("Save"):
                             for l in st.session_state.data["logs"]:
                                 if l.get("log_id") == log["log_id"]:
                                     l["task"] = new_task
                                     l["minutes"] = new_minutes
-    
+
                             save_data()
                             st.rerun()
-            
-for c in log.get("comments", []):
 
-    comment_id = c.get("comment_id")
+            # 💬 COMMENTS
+            for c in log.get("comments", []):
 
-    st.markdown(f"**{c.get('teacher', 'Unknown')}**")
-    st.write(c.get("text", ""))
+                comment_id = c.get("comment_id")
 
-    if is_teach and comment_id:
+                st.markdown(f"**{c.get('teacher', 'Unknown')}**")
+                st.write(c.get("text", ""))
 
-        c1, c2 = st.columns(2)
+                if is_teach and comment_id:
 
-        # 🗑️ DELETE COMMENT
-        if c1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
-            log["comments"] = [
-                x for x in log["comments"]
-                if x.get("comment_id") != comment_id
-            ]
-            save_data()
-            st.rerun()
+                    c1, c2 = st.columns(2)
 
-        # ✏️ EDIT COMMENT
-        with c2.expander("✏️ Edit"):
-            with st.form(f"edit_c_{comment_id}"):
-                new_text = st.text_area("Edit comment", value=c.get("text", ""))
+                    # 🗑️ DELETE COMMENT
+                    if c1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
+                        log["comments"] = [
+                            x for x in log["comments"]
+                            if x.get("comment_id") != comment_id
+                        ]
+                        save_data()
+                        st.rerun()
 
-                if st.form_submit_button("Save"):
-                    for x in log["comments"]:
-                        if x.get("comment_id") == comment_id:
-                            x["text"] = new_text
+                    # ✏️ EDIT COMMENT
+                    with c2.expander("✏️ Edit"):
+                        with st.form(f"edit_c_{comment_id}"):
+                            new_text = st.text_area("Edit comment", value=c.get("text", ""))
 
-                    save_data()
-                    st.rerun()
-        
+                            if st.form_submit_button("Save"):
+                                for x in log["comments"]:
+                                    if x.get("comment_id") == comment_id:
+                                        x["text"] = new_text
+
+                                save_data()
+                                st.rerun()
+                            
 # --- TAB 3: PROGRESS ---
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
