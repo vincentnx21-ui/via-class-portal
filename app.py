@@ -192,6 +192,8 @@ USER_PASSWORDS = {
 }
 CHAIRMAN_SECRET_PW = "chair2026"
 
+import time
+
 if not st.session_state.authenticated:
     st.markdown("""
     <style>
@@ -207,35 +209,38 @@ if not st.session_state.authenticated:
         100% {background-position: 0% 50%;}
     }
 
-    .login-card {
-        background: rgba(255,255,255,0.08);
-        backdrop-filter: blur(12px);
-        padding: 40px;
-        border-radius: 20px;
-        width: 420px;
+    /* CENTER EVERYTHING */
+    .block-container {
+        padding-top: 6vh;
+        max-width: 450px;
         margin: auto;
-        margin-top: 8vh;
-        box-shadow: 0 0 30px rgba(0,0,0,0.4);
-        animation: popIn 0.8s ease;
     }
 
-    @keyframes popIn {
-        from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
+    /* STYLE INPUTS */
+    div[data-baseweb="input"], div[data-baseweb="select"] {
+        border-radius: 12px !important;
     }
 
+    /* BUTTON */
+    button[kind="primary"] {
+        background: #0ea5e9 !important;
+        border-radius: 10px !important;
+        font-weight: bold;
+    }
+
+    button[kind="primary"]:hover {
+        transform: scale(1.02);
+        transition: 0.2s;
+    }
+
+    /* TITLE */
     .title {
         text-align: center;
         color: white;
-        font-size: 32px;
-        font-weight: 700;
-        margin-bottom: 10px;
+        font-size: 34px;
+        font-weight: 800;
+        margin-bottom: 5px;
+        animation: popIn 0.8s ease;
     }
 
     .subtitle {
@@ -243,10 +248,13 @@ if not st.session_state.authenticated:
         color: #cbd5e1;
         margin-bottom: 25px;
     }
+
+    @keyframes popIn {
+        from {opacity: 0; transform: translateY(20px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
     </style>
     """, unsafe_allow_html=True)
-
-    st.markdown("<div class='login-card'>", unsafe_allow_html=True)
 
     st.markdown("<div class='title'>🚀 VIA Portal 2026</div>", unsafe_allow_html=True)
     st.markdown("<div class='subtitle'>Sign in to continue</div>", unsafe_allow_html=True)
@@ -260,7 +268,6 @@ if not st.session_state.authenticated:
 
         if login_btn:
 
-            # --- AUTH CHECK ---
             if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
                 st.session_state.authenticated = True
                 st.session_state.u_name = name_in
@@ -275,16 +282,13 @@ if not st.session_state.authenticated:
                 st.error("Access Denied")
                 st.stop()
 
-            # --- SUCCESS FLOW ---
-            with st.spinner("Loading dashboard..."):
-                time.sleep(1.2)
+            with st.spinner("Entering portal..."):
+                time.sleep(1)
 
             st.success("Welcome!")
             st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
-    
 # --- 5. PERMISSIONS ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
 is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
