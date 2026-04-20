@@ -311,7 +311,7 @@ with active_tab[2]:
     for log in reversed(proj_logs):
         with st.container(border=True):
 
-        is_system = log.get("user") == "SYSTEM"
+            is_system = log.get("user") == "SYSTEM"
 
         ct, cs = st.columns([3, 1])
         ct.markdown(f"**{log['user']}** - {log['task']}\n\n📅 {log['date']}")
