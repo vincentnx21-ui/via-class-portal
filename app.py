@@ -110,10 +110,10 @@ if "data" not in st.session_state:
 generate_event_reports()
 st.session_state._migrated = True
 
-    for log in st.session_state.data.get("logs", []):
-        for c in log.get("comments", []):
-            if "comment_id" not in c:
-                c["comment_id"] = str(datetime.now().timestamp())
+for log in st.session_state.data.get("logs", []):
+    for c in log.get("comments", []):
+        if "comment_id" not in c:
+            c["comment_id"] = str(datetime.now().timestamp())
                 
 required_keys = ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance"]
 for key in required_keys:
@@ -323,71 +323,60 @@ with active_tab[2]:
 
         # 🗑️ EDIT/DELETE ONLY IF NOT SYSTEM
         if is_teach and not is_system:
-                col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-                if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
-                    st.session_state.data["logs"] = [
-                        l for l in st.session_state.data["logs"]
-                        if l.get("log_id") != log["log_id"]
+            if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
+                st.session_state.data["logs"] = [
+                    l for l in st.session_state.data["logs"]
+                    if l.get("log_id") != log["log_id"]
+                ]
+                save_data()
+                st.rerun()
+
+            with col2.expander("✏️ Edit"):
+                with st.form(f"edit_{log['log_id']}"):
+                    new_task = st.text_input("Task", value=log["task"])
+                    new_minutes = st.number_input("Minutes", value=log["minutes"], step=5)
+
+                    if st.form_submit_button("Save"):
+                        for l in st.session_state.data["logs"]:
+                            if l.get("log_id") == log["log_id"]:
+                                l["task"] = new_task
+                                l["minutes"] = new_minutes
+
+                        save_data()
+                        st.rerun()
+
+        # 💬 COMMENTS
+        for c in log.get("comments", []):
+            comment_id = c.get("comment_id")
+            teacher_name = c.get("teacher", "Unknown")
+
+            st.markdown(f"**{teacher_name}**")
+            st.write(c.get("text", ""))
+
+            if is_teach and teacher_name == c_name and comment_id:
+                action_col1, action_col2, _ = st.columns([1, 1, 6])
+
+                if action_col1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
+                    log["comments"] = [
+                        x for x in log["comments"]
+                        if x.get("comment_id") != comment_id
                     ]
                     save_data()
                     st.rerun()
 
-                with col2.expander("✏️ Edit"):
-                    with st.form(f"edit_{log['log_id']}"):
-                        new_task = st.text_input("Task", value=log["task"])
-                        new_minutes = st.number_input("Minutes", value=log["minutes"], step=5)
+                with action_col2.expander("✏️ Edit"):
+                    with st.form(f"edit_c_{comment_id}"):
+                        new_text = st.text_area("Edit your feedback", value=c.get("text", ""))
 
                         if st.form_submit_button("Save"):
-                            for l in st.session_state.data["logs"]:
-                                if l.get("log_id") == log["log_id"]:
-                                    l["task"] = new_task
-                                    l["minutes"] = new_minutes
+                            for x in log["comments"]:
+                                if x.get("comment_id") == comment_id:
+                                    x["text"] = new_text
 
                             save_data()
                             st.rerun()
-
-                # 💬 COMMENTS (INSIDE LOG LOOP)
-                for c in log.get("comments", []):
-                
-                    comment_id = c.get("comment_id")
-                    teacher_name = c.get("teacher", "Unknown")
-                
-                    st.markdown(f"**{teacher_name}**")
-                    st.write(c.get("text", ""))
-                
-                    # 👇 ONLY SHOW CONTROLS IF:
-                    # - user is teacher
-                    # - AND they own the comment
-                    if is_teach and teacher_name == c_name and comment_id:
-                
-                        action_col1, action_col2, _ = st.columns([1, 1, 6])
-                
-                        # 🗑️ DELETE OWN COMMENT ONLY
-                        if action_col1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
-                            log["comments"] = [
-                                x for x in log["comments"]
-                                if x.get("comment_id") != comment_id
-                            ]
-                            save_data()
-                            st.rerun()
-                
-                        # ✏️ EDIT OWN COMMENT ONLY
-                        with action_col2.expander("✏️ Edit"):
-                            with st.form(f"edit_c_{comment_id}"):
-                
-                                new_text = st.text_area(
-                                    "Edit your feedback",
-                                    value=c.get("text", "")
-                                )
-                
-                                if st.form_submit_button("Save"):
-                                    for x in log["comments"]:
-                                        if x.get("comment_id") == comment_id:
-                                            x["text"] = new_text
-                
-                                    save_data()
-                                    st.rerun()
                             
 # --- TAB 3: PROGRESS ---
 with active_tab[3]:
