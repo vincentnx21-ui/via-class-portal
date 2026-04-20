@@ -189,53 +189,53 @@ with active_tab[0]:
     col1, col2 = st.columns([3, 1])  # wider event section
     
     with col1:
-    st.subheader("📅 Event RSVP")
+        st.subheader("📅 Event RSVP")
 
-    # ✅ MOVE EVERYTHING BELOW INSIDE col1
-    all_events = st.session_state.data.get("events", [])
-    today = date.today()
+        # ✅ MOVE EVERYTHING BELOW INSIDE col1
+        all_events = st.session_state.data.get("events", [])
+        today = date.today()
+        
+        current_events = []
+        history_events = []
     
-    current_events = []
-    history_events = []
-
-    for e in all_events:
-        event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
-
-        if e.get("status") == "Cancelled" or event_date < today:
-            history_events.append(e)
-        else:
-            current_events.append(e)
-
-    # --- CURRENT EVENTS ---
-    if not current_events:
-        st.info("No upcoming events.")
-    else:
-        for i, e in enumerate(current_events):
-            with st.container(border=True):
-                st.write(f"**{e['type']}**")
-                st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}")
-
-                with st.expander("Update My RSVP"):
-                    pass
-
-    # --- HISTORY ---
-    st.divider()
-    st.subheader("📜 Event History")
-
-    if not history_events:
-        st.caption("No past or cancelled events.")
-    else:
-        for e in reversed(history_events):
+        for e in all_events:
             event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+    
+            if e.get("status") == "Cancelled" or event_date < today:
+                history_events.append(e)
+            else:
+                current_events.append(e)
 
-            with st.container(border=True):
-                if e.get("status") == "Cancelled":
-                    st.error(f"🚫 **CANCELLED: {e['type']}**")
-                else:
-                    st.success(f"✅ **COMPLETED: {e['type']}**")
-
-                st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
-                
+        # --- CURRENT EVENTS ---
+        if not current_events:
+            st.info("No upcoming events.")
+        else:
+            for i, e in enumerate(current_events):
+                with st.container(border=True):
+                    st.write(f"**{e['type']}**")
+                    st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}")
+    
+                    with st.expander("Update My RSVP"):
+                        pass
+    
+        # --- HISTORY ---
+        st.divider()
+        st.subheader("📜 Event History")
+    
+        if not history_events:
+            st.caption("No past or cancelled events.")
+        else:
+            for e in reversed(history_events):
+                event_date = datetime.strptime(e["date"], "%Y-%m-%d").date() if isinstance(e["date"], str) else e["date"]
+    
+                with st.container(border=True):
+                    if e.get("status") == "Cancelled":
+                        st.error(f"🚫 **CANCELLED: {e['type']}**")
+                    else:
+                        st.success(f"✅ **COMPLETED: {e['type']}**")
+    
+                    st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
+                    
     with col2:
         st.subheader("👥 Team Roster")
         mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
