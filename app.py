@@ -774,13 +774,13 @@ with active_tab[2]:
                 if st.form_submit_button("Submit"):
                     log_system_event(f"Added log: {lt}", c_name)
                     st.session_state.data["logs"].append({
-                        "log_id": f"log_{datetime.now().timestamp()}",
-                        "user": c_name,
-                        "date": str(ld),
-                        "minutes": lm,
-                        "task": lt,
-                        "project": lp,
-                        "comments": []
+                    "log_id": f"event_{datetime.now().timestamp()}",
+                    "user": c_name,
+                    "date": str(date.today()),
+                    "minutes": 0,
+                    "task": f"Created event: {ty}",
+                    "project": ep,
+                    "comments": []
                     })
                     save_data()
                     st.success("Logged!")
@@ -1067,15 +1067,19 @@ if is_chair:
                 st_time, v = st.time_input("Start"), st.text_input("Venue")
                 if st.form_submit_button("Add Event"):
                     log_system_event(f"Created event: {ty}", c_name)
-                    st.session_state.data["logs"].append({
-                        "log_id": ...,
-                        "user": an,
-                        "date": str(date.today()),
-                        "minutes": am,
-                        "task": f"ADMIN ADJ: {ar}",
-                        "project": ap
+                
+                    st.session_state.data["events"].append({
+                        "project": ep,
+                        "type": ty,
+                        "date": d,
+                        "start_time": st_time,
+                        "venue": v,
+                        "status": "Active"
                     })
-                    save_data(); st.rerun()
+                
+                    save_data()
+                    st.success("Event added!")
+                    st.rerun()
 
             st.divider()
             st.subheader("📝 Existing Events")
