@@ -488,29 +488,28 @@ if not st.session_state.authenticated:
         login_btn = st.form_submit_button("Sign In")
 
         if login_btn:
+
             if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
                 st.session_state.authenticated = True
                 st.session_state.u_name = name_in
                 st.session_state.u_role = "Chairman"
-        
+
             elif pw_in == USER_PASSWORDS.get(role_in):
                 st.session_state.authenticated = True
                 st.session_state.u_name = name_in
                 st.session_state.u_role = role_in
-        
+
             else:
                 st.error("Access Denied")
                 st.stop()
 
-            # ✅ ADD THIS
-            log_system_event("Logged into portal", name_in)
-            save_data()
-        
             with st.spinner("Entering portal..."):
                 time.sleep(1)
 
             st.success("Welcome!")
             st.rerun()
+
+    st.stop()
 # --- 5. PERMISSIONS ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
 is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
