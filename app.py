@@ -312,11 +312,11 @@ def render_event_calendar(events, selected_project):
                         if is_past:
                             border = "1px dashed #64748b !important"
                             color = "#64748b !important"
-                            icon = "⚫"
+                            icon = ""
                         elif is_today:
                             border = "2px solid #ffffff !important"
                             color = "#ffffff !important"
-                            icon = "⭐"
+                            icon = ""
                         else:
                             border = "1px solid #38bdf8 !important"
                             color = "#38bdf8 !important"
