@@ -197,7 +197,7 @@ def log_system_event(action, user):
     })
 
 def render_event_calendar(events, selected_project):
-    """Framed Calendar with Circular Buttons Inside"""
+    """Calendar with colored buttons - no emojis, scoped CSS"""
     import calendar
     from datetime import datetime, date, timedelta
 
@@ -225,7 +225,6 @@ def render_event_calendar(events, selected_project):
                     month_events[day] = []
                 month_events[day].append(e)
 
-                # Reminder Logic
                 if evt_date == tomorrow:
                     reminders.append(f"⚠️ **Tomorrow**: {e['type']} ({e.get('start_time', 'N/A')})")
                 elif evt_date == day_after:
@@ -239,122 +238,148 @@ def render_event_calendar(events, selected_project):
     if 'cal_day_selected' not in st.session_state:
         st.session_state.cal_day_selected = None
 
-    # --- CSS FOR FRAMED & CIRCULAR DESIGN ---
+    # --- SCOPED CSS (Only affects calendar) ---
     st.markdown("""
     <style>
-    /* The Main Frame */
-    .cal-main-frame {
+    /* Main Container */
+    .cal-container {
         background: #0f172a;
         border: 2px solid #334155;
         border-radius: 16px;
-        padding: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        margin-bottom: 20px;
+        padding: 16px;
+        margin-bottom: 16px;
     }
     
-    /* Circular Buttons */
-    div[data-testid="stColumn"] button[kind="secondary"] {
+    /* Calendar row columns */
+    .cal-row > div {
+        min-height: 40px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Only target buttons INSIDE cal-btn-wrapper class */
+    .cal-btn-wrapper button {
         border-radius: 50% !important;
         width: 36px !important;
         height: 36px !important;
         min-height: 36px !important;
         padding: 0 !important;
         margin: 0 auto !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background: transparent !important;
-        font-size: 14px !important;
-        transition: all 0.2s ease;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        border: 2px solid !important;
     }
-    div[data-testid="stColumn"] button[kind="secondary"]:hover {
-        background: rgba(255,255,255,0.1) !important;
+    
+    /* Date text for non-event days */
+    .cal-date-text {
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- START FRAME ---
-    st.markdown('<div class="cal-main-frame">', unsafe_allow_html=True)
+    # --- START CONTAINER ---
+    st.markdown('<div class="cal-container">', unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align:center; margin:0 0 12px 0; color:#38bdf8;'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
 
-    # Title
-    st.markdown(f"<h3 style='text-align:center; margin-bottom:10px; color:var(--accent);'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
-
-    # Reminders (Inside Frame)
+    # Reminders
     if reminders:
-        with st.container(border=True):
-            for r in reminders:
-                st.warning(r, icon="")
+        for r in reminders:
+            st.warning(r, icon="🔔")
 
-    # Day Headers
+    # Headers
     cols = st.columns(7)
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    for i, d in enumerate(days):
-        cols[i].markdown(f"<div style='text-align:center; color:#94a3b8; font-size:12px; font-weight:600;'>{d}</div>", unsafe_allow_html=True)
+    for i, d in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+        cols[i].markdown(f"<div style='text-align:center; color:#94a3b8; font-size:11px; font-weight:600; padding:8px 0;'>{d}</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:5px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # --- GRID LOOP ---
+    # --- GRID ---
     for week in cal:
-        cols = st.columns(7)
+        row_cols = st.columns(7, gap="small")
         for i, day in enumerate(week):
             if day == 0:
-                with cols[i]:
-                    st.markdown("<div style='height:36px'></div>", unsafe_allow_html=True)
+                with row_cols[i]:
+                    st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
             else:
-                with cols[i]:
+                with row_cols[i]:
                     has_event = day in month_events
                     is_today = day == today.day
                     evt_date_obj = datetime(current_year, current_month, day).date()
                     is_past = evt_date_obj < today
 
                     if has_event:
-                        # Determine Style based on Time
+                        # Button colors - NO EMOJIS
                         if is_past:
-                            border = "1px dashed #64748b !important"
-                            color = "#64748b !important"
-                            icon = ""
+                            bg_color = "#1e293b"
+                            border_color = "#64748b"
+                            text_color = "#64748b"
                         elif is_today:
-                            border = "2px solid #ffffff !important"
-                            color = "#ffffff !important"
-                            icon = ""
+                            bg_color = "#334155"
+                            border_color = "#ffffff"
+                            text_color = "#ffffff"
                         else:
-                            border = "1px solid #38bdf8 !important"
-                            color = "#38bdf8 !important"
-                            icon = ""
+                            bg_color = "#0f172a"
+                            border_color = "#38bdf8"
+                            text_color = "#38bdf8"
 
-                        # Inject CSS for THIS specific button
+                        # Unique key for this button
+                        btn_key = f"cal_btn_{day}_{current_month}_{current_year}"
+                        
+                        # Wrapper div with specific class
+                        st.markdown(f'<div class="cal-btn-wrapper" id="wrapper_{btn_key}">', unsafe_allow_html=True)
+                        
+                        if st.button(
+                            str(day),  # NO EMOJI
+                            key=btn_key,
+                            use_container_width=True,
+                            type="secondary"
+                        ):
+                            st.session_state.cal_day_selected = day
+
+                        # Apply specific colors to THIS button only
                         st.markdown(f"""
                         <style>
-                        button[id="cal_btn_{day}"] {{
-                            border: {border};
-                            color: {color};
+                        #{btn_key} {{
+                            background: {bg_color} !important;
+                            border-color: {border_color} !important;
+                            color: {text_color} !important;
+                        }}
+                        #{btn_key}:hover {{
+                            background: {bg_color} !important;
+                            border-color: {text_color} !important;
+                            opacity: 0.8;
                         }}
                         </style>
                         """, unsafe_allow_html=True)
-
-                        # Button
-                        if st.button(f"{day}{icon}", key=f"cal_btn_{day}"):
-                            st.session_state.cal_day_selected = day
+                        
+                        st.markdown('</div>', unsafe_allow_html=True)
 
                     else:
-                        # No Event (Plain Text)
+                        # No event - just plain text
                         color = "#ffffff" if is_today else "#64748b"
+                        weight = "700" if is_today else "500"
                         st.markdown(
-                            f"<div style='text-align:center; height:36px; display:flex; align-items:center; justify-content:center; "
-                            f"color:{color}; font-size:14px;'>{day}</div>", 
+                            f"<div class='cal-date-text' style='color:{color}; font-weight:{weight};'>{day}</div>",
                             unsafe_allow_html=True
                         )
 
-    st.markdown('</div>', unsafe_allow_html=True) # --- CLOSE FRAME ---
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- DETAILS PANEL (Outside Frame) ---
+    # --- DETAILS PANEL ---
     if st.session_state.get('cal_day_selected') and st.session_state.cal_day_selected in month_events:
         with st.container(border=True):
-            st.markdown(f"**📅 Events on {st.session_state.cal_day_selected} {month_name}**")
+            st.markdown(f"**📅 {st.session_state.cal_day_selected} {month_name}**")
             for evt in month_events[st.session_state.cal_day_selected]:
                 st.markdown(f"🔹 **{evt['type']}**\n\n🕒 {evt.get('start_time', 'N/A')} | 📍 {evt.get('venue', 'N/A')}")
             
-            if st.button("Close", key="close_cal", type="secondary"):
+            if st.button("✕ Close", key="close_cal", type="secondary"):
                 st.session_state.cal_day_selected = None
                 st.rerun()
                 
