@@ -1,272 +1,312 @@
 import streamlit as st
 import pandas as pd
-import calendar
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time as dt_time, timedelta
 import firebase_admin
 from firebase_admin import credentials, db
 import copy
+import calendar
 
-# =========================
+# =============================
 # CONFIG
-# =========================
-st.set_page_config(page_title="VIA Portal 2026", layout="wide")
+# =============================
+st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 
-# =========================
-# CLEAN UI THEME
-# =========================
+# =============================
+# BASIC UI
+# =============================
 st.markdown("""
 <style>
 .stApp {
-    background: #0b1220;
-    color: #e5e7eb;
-}
-
-.block-container {
-    padding-top: 2rem;
-}
-
-[data-testid="stMetric"] {
-    background: #111827;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid #1f2937;
+    background: #0f172a;
+    color: #e2e8f0;
 }
 
 .stButton>button {
     background: #0ea5e9;
     color: white;
     border-radius: 10px;
-    border: none;
     font-weight: 600;
 }
 
-.stButton>button:hover {
-    background: #38bdf8;
+div[data-testid="stContainer"] {
+    background: #1e293b;
+    padding: 14px;
+    border-radius: 14px;
+}
+
+section[data-testid="stSidebar"] {
+    background: #020617;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# FIREBASE INIT
-# =========================
+# =============================
+# FIREBASE
+# =============================
 if not firebase_admin._apps:
     try:
-        if "firebase" in st.secrets:
-            cred = credentials.Certificate(dict(st.secrets["firebase"]))
-        else:
-            cred = credentials.Certificate("serviceAccountKey.json")
-
+        cred = credentials.Certificate("serviceAccountKey.json")
         firebase_admin.initialize_app(cred, {
             'databaseURL': 'https://via-report-default-rtdb.asia-southeast1.firebasedatabase.app/'
         })
     except Exception as e:
-        st.error(f"Firebase error: {e}")
+        st.error(e)
         st.stop()
 
-# =========================
-# SESSION STATE
-# =========================
-if "data" not in st.session_state:
-    st.session_state.data = {
-        "members": [],
-        "accounts": [],
-        "logs": [],
-        "contributions": {},
-        "events": [],
-        "attendance": {},
-        "system_logs": []
-    }
-
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if "page" not in st.session_state:
-    st.session_state.page = "dashboard"
-
-# =========================
-# HELPERS
-# =========================
-def normalize_date(d):
-    if isinstance(d, str):
-        return datetime.fromisoformat(d).date()
-    if isinstance(d, datetime):
-        return d.date()
-    return d
+# =============================
+# DATA
+# =============================
+def load_data():
+    try:
+        ref = db.reference("via_master_record")
+        data = ref.get()
+        return data or {
+            "members": [],
+            "accounts": [],
+            "logs": [],
+            "contributions": {},
+            "events": [],
+            "rsvp": [],
+            "attendance": {},
+            "system_logs": []
+        }
+    except:
+        return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}, "system_logs": []}
 
 def save_data():
     ref = db.reference("via_master_record")
     ref.set(st.session_state.data)
 
-def log_system(action):
-    st.session_state.data["system_logs"].append({
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "action": action
-    })
+# =============================
+# SESSION INIT
+# =============================
+if "data" not in st.session_state:
+    st.session_state.data = load_data()
 
-# =========================
-# LOGIN
-# =========================
-USER_PASSWORDS = {
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+
+if "role" not in st.session_state:
+    st.session_state.role = ""
+
+if "name" not in st.session_state:
+    st.session_state.name = ""
+
+# =============================
+# AUTH SYSTEM (CHAIRMAN FIXED)
+# =============================
+PASSWORDS = {
     "Teacher": "teach2026",
-    "VIA Committee": "comm2026",
+    "VIA Committee": "chair2026",   # ADMIN (Chairman)
     "Skit Representative": "skit2026",
     "Brochure Representative": "brochure2026",
     "VIA members": "member2026",
     "Classmates": "class2026"
 }
 
-if not st.session_state.authenticated:
+if not st.session_state.auth:
     st.title("🚀 VIA Portal Login")
 
-    with st.form("login"):
-        name = st.text_input("Name")
-        role = st.selectbox("Role", list(USER_PASSWORDS.keys()))
-        pw = st.text_input("Password", type="password")
+    name = st.text_input("Name").strip().title()
+    role = st.selectbox("Role", list(PASSWORDS.keys()))
+    pw = st.text_input("Password", type="password")
 
-        if st.form_submit_button("Login"):
-            if USER_PASSWORDS.get(role) == pw:
-                st.session_state.authenticated = True
-                st.session_state.u_name = name
-                st.session_state.u_role = role
-                st.rerun()
-            else:
-                st.error("Wrong credentials")
+    if st.button("Login"):
+        if pw == PASSWORDS.get(role):
+            st.session_state.auth = True
+            st.session_state.role = role
+            st.session_state.name = name
+            st.rerun()
+        else:
+            st.error("Wrong credentials")
 
     st.stop()
 
-# =========================
-# SIDEBAR (CLEAN)
-# =========================
-with st.sidebar:
-    st.markdown(f"""
-    <div style="
-        background:#111827;
-        padding:14px;
-        border-radius:12px;
-        margin-bottom:10px;
-    ">
-        <h4>{st.session_state.u_name}</h4>
-        <p style="color:#94a3b8;">{st.session_state.u_role}</p>
-    </div>
-    """, unsafe_allow_html=True)
+# =============================
+# ROLE FLAGS
+# =============================
+is_admin = st.session_state.role == "VIA Committee"
+is_teacher = st.session_state.role == "Teacher"
 
-    if st.button("🏠 Dashboard"):
-        st.session_state.page = "dashboard"
-    if st.button("📅 Events"):
-        st.session_state.page = "events"
-    if st.button("📊 Progress"):
-        st.session_state.page = "progress"
-    if st.button("📁 Directory"):
-        st.session_state.page = "directory"
+# =============================
+# SIDEBAR
+# =============================
+st.sidebar.title("🎛 VIA Panel")
+st.sidebar.write(f"👤 {st.session_state.name}")
+st.sidebar.write(f"Role: {st.session_state.role}")
 
-    st.markdown("---")
+project = st.sidebar.radio("Project", ["SKIT", "BROCHURE"])
+view_proj = project
 
-    if st.button("🚪 Logout"):
-        st.session_state.authenticated = False
-        st.rerun()
+if st.sidebar.button("Save"):
+    save_data()
+    st.success("Saved!")
 
-# =========================
-# CALENDAR (SAFE VERSION)
-# =========================
-def render_calendar(events):
+if st.sidebar.button("Logout"):
+    st.session_state.auth = False
+    st.rerun()
+
+# =============================
+# CALENDAR
+# =============================
+def render_calendar(events, project):
+    st.subheader("📅 Calendar")
+
     today = date.today()
     cal = calendar.monthcalendar(today.year, today.month)
 
-    st.subheader("📅 Calendar")
-
     for week in cal:
         cols = st.columns(7)
-
         for i, day in enumerate(week):
             if day == 0:
                 cols[i].write("")
             else:
-                has_event = any(
-                    normalize_date(e["date"]).day == day
+                active = any(
+                    e.get("project") == project and
+                    str(e.get("date"))[:10] == date(today.year, today.month, day).isoformat()
                     for e in events
                 )
 
-                if has_event:
-                    cols[i].button(f"🔵 {day}", key=f"cal_{day}")
-                elif day == today.day:
-                    cols[i].button(f"🟡 {day}", key=f"today_{day}")
-                else:
-                    cols[i].write(day)
+                cols[i].markdown(f"🔵 {day}" if active else str(day))
 
-# =========================
+# =============================
 # DASHBOARD
-# =========================
-def dashboard():
-    st.title("📊 Dashboard")
+# =============================
+st.title(f"🚀 {view_proj} Dashboard")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Events", len(st.session_state.data["events"]))
-    c2.metric("Logs", len(st.session_state.data["logs"]))
-    c3.metric("Members", len(st.session_state.data["members"]))
+events = st.session_state.data.get("events", [])
 
-    render_calendar(st.session_state.data["events"])
+render_calendar(events, view_proj)
 
-    st.subheader("Recent Events")
+st.markdown("---")
 
-    for e in st.session_state.data["events"]:
-        st.markdown(f"""
-        <div style="
-            background:#111827;
-            padding:12px;
-            border-radius:10px;
-            margin-bottom:8px;
-        ">
-            <b>{e['type']}</b><br>
-            <span style="color:#94a3b8;">{e['date']}</span>
-        </div>
-        """, unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
+c1.metric("Members", len(st.session_state.data["members"]))
+c2.metric("Events", len(events))
+c3.metric("Logs", len(st.session_state.data["logs"]))
 
-# =========================
-# EVENTS PAGE
-# =========================
-def events_page():
-    st.title("📅 Events")
+st.subheader("📜 Activity Logs")
 
-    with st.form("add_event"):
-        t = st.text_input("Event Type")
-        d = st.date_input("Date")
+for log in reversed(st.session_state.data.get("logs", [])[-20:]):
+    st.write(f"{log['user']} - {log['task']}")
 
-        if st.form_submit_button("Add Event"):
-            st.session_state.data["events"].append({
-                "type": t,
-                "date": d
-            })
-            save_data()
-            st.rerun()
+# =============================
+# ADMIN PANEL (FULL RESTORED)
+# =============================
+if is_admin:
+    st.markdown("---")
+    st.header("⚙️ Chairman Admin Panel")
 
-# =========================
-# PROGRESS
-# =========================
-def progress_page():
-    st.title("📊 Progress")
+    tabs = st.tabs([
+        "👥 Roster",
+        "📅 Events",
+        "🔐 Accounts",
+        "⚖️ Corrections",
+        "⚠️ Reset",
+        "🖥️ Terminal"
+    ])
 
-    st.metric("Total Contributions", len(st.session_state.data["contributions"]))
+    # ---------------- ROSTER ----------------
+    with tabs[0]:
+        st.subheader("Add Member")
 
-# =========================
-# DIRECTORY
-# =========================
-def directory_page():
-    st.title("📁 Directory")
+        with st.form("add_member"):
+            name = st.text_input("Name")
+            project = st.selectbox("Project", ["SKIT", "BROCHURE", "CLASS"])
+            is_rep = st.checkbox("Rep")
+            role = st.selectbox("Role", ["Actor", "Editor", "Designer", "Writer"])
 
-    for m in st.session_state.data["members"]:
-        st.write(f"👤 {m.get('name', 'Unknown')}")
+            if st.form_submit_button("Add"):
+                st.session_state.data["members"].append({
+                    "name": name,
+                    "project": project,
+                    "is_rep": is_rep,
+                    "sub_role": role
+                })
+                save_data()
+                st.rerun()
 
-# =========================
-# ROUTER
-# =========================
-if st.session_state.page == "dashboard":
-    dashboard()
+        st.divider()
 
-elif st.session_state.page == "events":
-    events_page()
+        for i, m in enumerate(st.session_state.data["members"]):
+            c1, c2 = st.columns([4,1])
+            c1.write(m["name"])
 
-elif st.session_state.page == "progress":
-    progress_page()
+            if c2.button("Delete", key=f"rm_{i}"):
+                st.session_state.data["members"].pop(i)
+                save_data()
+                st.rerun()
 
-elif st.session_state.page == "directory":
-    directory_page()
+    # ---------------- EVENTS ----------------
+    with tabs[1]:
+        st.subheader("Add Event")
+
+        with st.form("event"):
+            p = st.selectbox("Project", ["SKIT", "BROCHURE"])
+            t = st.text_input("Type")
+            d = st.date_input("Date")
+            tm = st.time_input("Time")
+            v = st.text_input("Venue")
+
+            if st.form_submit_button("Add"):
+                st.session_state.data["events"].append({
+                    "project": p,
+                    "type": t,
+                    "date": str(d),
+                    "time": str(tm),
+                    "venue": v
+                })
+                save_data()
+                st.rerun()
+
+    # ---------------- ACCOUNTS ----------------
+    with tabs[2]:
+        st.subheader("Accounts")
+
+        for i, a in enumerate(st.session_state.data["accounts"]):
+            c1, c2 = st.columns([4,1])
+            c1.write(a.get("name",""))
+
+            if c2.button("Delete", key=f"acc_{i}"):
+                st.session_state.data["accounts"].pop(i)
+                save_data()
+                st.rerun()
+
+    # ---------------- CORRECTIONS ----------------
+    with tabs[3]:
+        st.subheader("Time Adjustments")
+
+        with st.form("adj"):
+            p = st.selectbox("Project", ["SKIT", "BROCHURE"])
+            m = [x["name"] for x in st.session_state.data["members"] if x["project"] == p]
+            u = st.selectbox("User", m if m else ["None"])
+            mins = st.number_input("Minutes")
+
+            if st.form_submit_button("Apply"):
+                if u != "None":
+                    key = f"{u}_{p}"
+                    st.session_state.data["contributions"][key] = \
+                        st.session_state.data["contributions"].get(key, 0) + mins
+                    save_data()
+                    st.rerun()
+
+    # ---------------- RESET ----------------
+    with tabs[4]:
+        st.warning("Danger Zone")
+
+        confirm = st.text_input("Type RESET")
+
+        if st.button("Reset Data"):
+            if confirm == "RESET":
+                st.session_state.data["logs"] = []
+                st.session_state.data["contributions"] = {}
+                save_data()
+                st.success("Reset done")
+                st.rerun()
+
+    # ---------------- TERMINAL ----------------
+    with tabs[5]:
+        st.subheader("System Logs")
+
+        for l in reversed(st.session_state.data.get("system_logs", [])[-50:]):
+            st.code(f"{l}")
