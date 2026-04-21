@@ -197,7 +197,7 @@ def log_system_event(action, user):
     })
 
 def render_event_calendar(events, selected_project):
-    """Simplified calendar with clickable event bubbles"""
+    """Compact calendar - only event days are clickable"""
     import calendar
     from datetime import datetime, date
     
@@ -226,101 +226,90 @@ def render_event_calendar(events, selected_project):
     month_name = calendar.month_name[current_month]
     cal = calendar.monthcalendar(current_year, current_month)
     
-    # Store selected day in session state
+    # Session state for selected day
     if 'selected_calendar_day' not in st.session_state:
         st.session_state.selected_calendar_day = None
     
-    # Calendar Header
+    # Compact Header
+    st.markdown(f"**📅 {month_name} {current_year}**")
     col_header = st.columns(7)
     days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     for i, day in enumerate(days):
-        col_header[i].markdown(f"<div style='text-align: center; font-weight: 600; color: var(--muted); padding: 8px;'>{day}</div>", unsafe_allow_html=True)
+        col_header[i].markdown(f"<div style='text-align: center; font-size: 11px; color: var(--muted); font-weight: 600;'>{day}</div>", unsafe_allow_html=True)
     
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
     
-    # Calendar Grid
+    # Calendar Grid - Compact
     for week in cal:
         cols = st.columns(7)
         for idx, day in enumerate(week):
             if day == 0:
-                # Empty cell
                 with cols[idx]:
-                    st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
             else:
                 with cols[idx]:
                     has_events = day in month_events
                     is_today = day == today.day
                     
-                    # Button styling
-                    btn_color = "#0ea5e9" if has_events else ("#1e293b" if is_today else "#0f172a")
-                    border_color = "#38bdf8" if is_today else ("rgba(56,189,248,0.3)" if has_events else "rgba(255,255,255,0.05)")
-                    
-                    # Create clickable button for the day
-                    day_label = f"{day}" if not has_events else f"{day} 🔵"
-                    
-                    if st.button(
-                        day_label, 
-                        key=f"cal_day_{day}",
-                        use_container_width=True,
-                        type="secondary" if not is_today else "primary"
-                    ):
-                        st.session_state.selected_calendar_day = day
-                    
-                    # Show event count bubble
                     if has_events:
+                        # ✅ ONLY DAYS WITH EVENTS ARE BUTTONS
                         event_count = len(month_events[day])
+                        btn_style = "primary" if is_today else "secondary"
+                        
+                        if st.button(
+                            f"{day} 🔵", 
+                            key=f"cal_day_{day}",
+                            use_container_width=True,
+                            type=btn_style
+                        ):
+                            st.session_state.selected_calendar_day = day
+                        
+                        # Small badge
                         st.markdown(
-                            f"<div style='text-align: center; margin-top: -35px; margin-bottom: 10px;'>"
+                            f"<div style='text-align: center; margin-top: -32px; pointer-events: none;'>"
                             f"<span style='background: var(--primary); color: white; "
-                            f"border-radius: 50%; padding: 2px 8px; font-size: 11px; "
-                            f"font-weight: 600;'>{event_count}</span>"
+                            f"border-radius: 50%; padding: 1px 6px; font-size: 9px; "
+                            f"font-weight: 700;'>{event_count}</span>"
                             f"</div>", 
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        # ❌ DAYS WITHOUT EVENTS - Just plain text
+                        text_color = "#38bdf8" if is_today else "var(--muted)"
+                        font_weight = "700" if is_today else "400"
+                        st.markdown(
+                            f"<div style='text-align: center; height: 35px; "
+                            f"display: flex; align-items: center; justify-content: center; "
+                            f"color: {text_color}; font-weight: {font_weight}; "
+                            f"font-size: 13px;'>{day}</div>",
                             unsafe_allow_html=True
                         )
     
     # Show event details if a day is selected
     if st.session_state.selected_calendar_day and st.session_state.selected_calendar_day in month_events:
-        st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-        st.markdown(f"### 📅 Events on {st.session_state.selected_calendar_day} {month_name}")
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"**📋 Events on {st.session_state.selected_calendar_day} {month_name}**")
         
         for evt in month_events[st.session_state.selected_calendar_day]:
             with st.container():
                 st.markdown(f"""
                 <div style="
                     background: var(--card);
-                    border-left: 4px solid var(--primary);
-                    padding: 12px;
-                    border-radius: 8px;
-                    margin: 8px 0;
+                    border-left: 3px solid var(--primary);
+                    padding: 10px;
+                    border-radius: 6px;
+                    margin: 6px 0;
                 ">
-                    <strong style="color: var(--accent);">{evt['type']}</strong><br>
-                    <span style="color: var(--muted); font-size: 13px;">
+                    <strong>{evt['type']}</strong><br>
+                    <span style="color: var(--muted); font-size: 12px;">
                     🕒 {evt.get('start_time', 'N/A')} | 📍 {evt.get('venue', 'N/A')}
                     </span>
                 </div>
                 """, unsafe_allow_html=True)
         
-        # Clear selection button
-        if st.button("✕ Clear Selection", key="clear_cal"):
+        if st.button("✕ Close", key="clear_cal", type="secondary"):
             st.session_state.selected_calendar_day = None
             st.rerun()
-        
-    if month_events:
-        with st.expander("📋 Event Details This Month", expanded=False):
-            for day in sorted(month_events.keys()):
-                for evt in month_events[day]:
-                    st.markdown(f"""
-                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin: 6px 0; border-left: 3px solid var(--primary);">
-                        <strong>{evt['type']}</strong> • {day} {month_name}<br>
-                        <span style="color: var(--muted); font-size: 13px;">🕒 {evt.get('start_time', 'N/A')} | 📍 {evt.get('venue', 'N/A')}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-# ✅ END OF FUNCTION ⬆️
-
-# --- YOUR EXISTING CODE CONTINUES HERE ---
-if "data" not in st.session_state:
-    st.session_state.data = load_data()
-# ... rest of your code ...
 
 if "data" not in st.session_state:
     st.session_state.data = load_data()
