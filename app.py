@@ -327,28 +327,96 @@ c_name, c_role = st.session_state.u_name, st.session_state.u_role
 is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
 is_rep = "Representative" in c_role or any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []))
 
-# --- SIDEBAR UI (Define this ONCE here) ---
-st.sidebar.markdown("## 🎛 Control Panel")
+# --- MODERN SIDEBAR UI ---
+st.sidebar.markdown("""
+<style>
+/* Sidebar container styling */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #020617, #0f172a);
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
 
-st.sidebar.markdown(f"👤 **{c_name}**")
-st.sidebar.caption(f"Role: {c_role}")
+/* Sidebar title */
+.sidebar-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #38bdf8;
+    margin-bottom: 8px;
+}
+
+/* User card */
+.user-card {
+    background: rgba(255,255,255,0.03);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(56,189,248,0.15);
+    margin-bottom: 12px;
+}
+
+/* Section headers */
+.sidebar-section {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Divider */
+hr {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("<div class='sidebar-title'>🎛 Control Panel</div>", unsafe_allow_html=True)
+
+# --- USER INFO CARD ---
+st.sidebar.markdown(f"""
+<div class="user-card">
+    <div style="font-size:16px; font-weight:700;">👤 {c_name}</div>
+    <div style="color:#94a3b8; font-size:13px;">{c_role}</div>
+</div>
+""", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 
+# --- PROJECT SELECT ---
+st.sidebar.markdown("<div class='sidebar-section'>Project View</div>", unsafe_allow_html=True)
+
 view_proj = st.sidebar.radio(
-    "Select Project",
-    ["🎭 SKIT", "📄 BROCHURE"]
+    "",
+    ["🎭 SKIT", "📄 BROCHURE"],
+    label_visibility="collapsed"
 )
 
-# optional: clean value
 view_proj = "SKIT" if "SKIT" in view_proj else "BROCHURE"
 
 st.sidebar.markdown("---")
 
-if st.sidebar.button("🔓 Logout", use_container_width=True):
+# --- QUICK ACTIONS ---
+st.sidebar.markdown("<div class='sidebar-section'>Actions</div>", unsafe_allow_html=True)
+
+col1, col2 = st.sidebar.columns(2)
+
+with col1:
+    if st.button("🔄 Refresh"):
+        st.rerun()
+
+with col2:
+    if st.button("📊 Sync"):
+        save_data()
+        st.success("Saved!")
+
+st.sidebar.markdown("---")
+
+# --- LOGOUT ---
+if st.sidebar.button("🚪 Logout", use_container_width=True):
     st.session_state.authenticated = False
     st.rerun()
-
+    
 # --- 6. TABS DEFINITION ---
 tabs_list = ["🏠 Dashboard", "✅ Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
 if is_chair:
