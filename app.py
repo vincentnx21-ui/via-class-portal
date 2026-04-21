@@ -1076,7 +1076,7 @@ if is_chair:
                 submitted = st.form_submit_button("Add Event")
             
                 if submitted:
-                    log_system_event(f"Created event: {ty}", c_name)
+                    log_system_event(f"Created event: {ty}", c_name):
             
                     st.session_state.data["events"].append({
                         "project": ep,
