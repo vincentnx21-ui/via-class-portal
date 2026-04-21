@@ -1,13 +1,10 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, time as dt_time, date, timedelta
+from datetime import datetime, time, date
 import firebase_admin
 from firebase_admin import credentials, db
-import time as tm
 import time
 from collections import defaultdict
-import copy
-import calendar
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
@@ -161,7 +158,7 @@ def generate_event_reports():
 def save_data():
     try:
         ref = db.reference("via_master_record")
-        data_copy = copy.deepcopy(st.session_state.data)
+        data_copy = st.session_state.data.copy()
 
         if "events" in data_copy:
             serializable_events = []
@@ -169,7 +166,7 @@ def save_data():
             for e in data_copy["events"]:
                 e_copy = e.copy()
 
-                if e_copy.get("date") and hasattr(e_copy["date"], "isoformat"):
+                if hasattr(e_copy["date"], "isoformat"):
                     e_copy["date"] = e_copy["date"].isoformat()
 
                 if hasattr(e_copy["start_time"], "strftime"):
@@ -202,9 +199,8 @@ def log_system_event(action, user):
 
 def render_event_calendar(events, selected_project):
     """Calendar with colored buttons - no emojis, scoped CSS"""
-    
-    import time as tm
-    from datetime import datetime, time, date
+    import calendar
+    from datetime import datetime, date, timedelta
 
     today = date.today()
     current_month = today.month
@@ -234,8 +230,8 @@ def render_event_calendar(events, selected_project):
                     reminders.append(f"⚠️ **Tomorrow**: {e['type']} ({e.get('start_time', 'N/A')})")
                 elif evt_date == day_after:
                     reminders.append(f"📅 **Day After**: {e['type']} ({e.get('start_time', 'N/A')})")
-        except Exception as e:
-            st.warning(f"Event parse error: {e}")
+        except:
+            continue
 
     month_name = calendar.month_name[current_month]
     cal = calendar.monthcalendar(current_year, current_month)
@@ -290,9 +286,9 @@ def render_event_calendar(events, selected_project):
     """, unsafe_allow_html=True)
 
     # --- START CONTAINER ---
-    with st.container():
-        st.markdown(f"<h3 style='text-align:center; margin:0 0 12px 0; color:#38bdf8;'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
-    
+    st.markdown('<div class="cal-container">', unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align:center; margin:0 0 12px 0; color:#38bdf8;'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
+
     # Reminders
     if reminders:
         for r in reminders:
@@ -423,8 +419,10 @@ CHAIRMAN_SECRET_PW = "chair2026"
 if not st.session_state.authenticated:
     st.markdown("""
     <style>
-    .login-container .stApp {
+    .stApp {
         background: linear-gradient(-45deg, #0f172a, #1e293b, #0ea5e9, #1e293b);
+        background-size: 400% 400%;
+        animation: gradientBG 12s ease infinite;
     }
 
     @keyframes gradientBG {
@@ -434,11 +432,11 @@ if not st.session_state.authenticated:
     }
 
     /* CENTER EVERYTHING */
-.login-container .block-container {
-    padding-top: 6vh;
-    max-width: 450px;
-    margin: auto;
-}
+    .block-container {
+        padding-top: 6vh;
+        max-width: 450px;
+        margin: auto;
+    }
 
     /* STYLE INPUTS */
     div[data-baseweb="input"], div[data-baseweb="select"] {
@@ -477,16 +475,9 @@ if not st.session_state.authenticated:
         from {opacity: 0; transform: translateY(20px);}
         to {opacity: 1; transform: translateY(0);}
     }
-    input, div[data-baseweb="select"] {
-        background-color: #020617 !important;
-        color: white !important;
-        border-radius: 8px !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-if not st.session_state.authenticated:
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
     st.markdown("<div class='title'>🚀 VIA Portal 2026</div>", unsafe_allow_html=True)
     st.markdown("<div class='subtitle'>Sign in to continue</div>", unsafe_allow_html=True)
 
@@ -498,14 +489,10 @@ if not st.session_state.authenticated:
         login_btn = st.form_submit_button("Sign In")
 
         if login_btn:
-            if not name_in:
-                st.error("Name cannot be empty")
-                st.stop()
-                    
             if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
                 st.session_state.authenticated = True
                 st.session_state.u_name = name_in
-                is_chair = (st.session_state.u_role == "Chairman")
+                st.session_state.u_role = "Chairman"
         
             elif pw_in == USER_PASSWORDS.get(role_in):
                 st.session_state.authenticated = True
@@ -793,8 +780,8 @@ with active_tab[2]:
                     "user": c_name,
                     "date": str(date.today()),
                     "minutes": 0,
-                    "task": lt,
-                    "project": lp,
+                    "task": f"Created event: {ty}",
+                    "project": ep,
                     "comments": []
                     })
                     save_data()
