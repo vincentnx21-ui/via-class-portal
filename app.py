@@ -772,16 +772,18 @@ with active_tab[2]:
                 lp = st.selectbox("Project", ["SKIT", "BROCHURE"], index=0 if view_proj=="SKIT" else 1)
 
                 if st.form_submit_button("Submit"):
-                    log_system_event(f"Added log: {lt}", c_name):
+                    log_system_event(f"Added log: {lt}", c_name)
+                
                     st.session_state.data["logs"].append({
-                    "log_id": f"event_{datetime.now().timestamp()}",
-                    "user": c_name,
-                    "date": str(date.today()),
-                    "minutes": 0,
-                    log_system_event(f"Created event: {ty}", c_name):
-                    "project": ep,
-                    "comments": []
+                        "log_id": f"event_{datetime.now().timestamp()}",
+                        "user": c_name,
+                        "date": str(ld),
+                        "minutes": lm,
+                        "task": lt,
+                        "project": lp,
+                        "comments": []
                     })
+                
                     save_data()
                     st.success("Logged!")
                     st.rerun()
