@@ -286,9 +286,9 @@ def render_event_calendar(events, selected_project):
     """, unsafe_allow_html=True)
 
     # --- START CONTAINER ---
-    st.markdown('<div class="cal-container">', unsafe_allow_html=True)
+    with st.container(border=True):
     st.markdown(f"<h3 style='text-align:center; margin:0 0 12px 0; color:#38bdf8;'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
-
+    
     # Reminders
     if reminders:
         for r in reminders:
