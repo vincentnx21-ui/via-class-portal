@@ -195,7 +195,88 @@ def log_system_event(action, user):
         "user": user,
         "action": action
     })
+
+def render_event_calendar(events, selected_project):
+    import calendar
+    from datetime import datetime, date
     
+    today = date.today()
+    current_month = today.month
+    current_year = today.year
+    
+    month_events = {}
+    for e in events:
+        try:
+            evt_date = e.get("date")
+            if isinstance(evt_date, str):
+                evt_date = datetime.fromisoformat(evt_date).date()
+            elif isinstance(evt_date, datetime):
+                evt_date = evt_date.date()
+            if evt_date.month == current_month and evt_date.year == current_year and e.get("project") == selected_project:
+                day = evt_date.day
+                if day not in month_events:
+                    month_events[day] = []
+                month_events[day].append(e)
+        except:
+            continue
+    
+    cal = calendar.monthcalendar(current_year, current_month)
+    month_name = calendar.month_name[current_month]
+    
+    st.markdown(f"""
+    <div style="background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
+        <h4 style="margin: 0 0 12px 0; color: var(--accent);">📅 {month_name} {current_year}</h4>
+        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;">
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Sun</div>
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Mon</div>
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Tue</div>
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Wed</div>
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Thu</div>
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Fri</div>
+            <div style="font-weight: 600; color: var(--muted); font-size: 12px;">Sat</div>
+    """, unsafe_allow_html=True)
+    
+    for week in cal:
+        for day in week:
+            if day == 0:
+                st.markdown('<div style="min-height: 60px;"></div>', unsafe_allow_html=True)
+            else:
+                has_event = day in month_events
+                is_today = day == today.day and current_month == today.month and current_year == today.year
+                badges = ""
+                if has_event:
+                    for evt in month_events[day]:
+                        color = "#0ea5e9" if evt.get("type") in ["Discussion", "Rehearsal"] else "#38bdf8"
+                        badges += f'<span style="display:block; font-size:10px; background:{color}; color:white; padding:2px 4px; border-radius:4px; margin:1px 0;">{evt["type"][:8]}</span>'
+                bg_color = "rgba(14, 165, 233, 0.2)" if has_event else "transparent"
+                border_color = "#0ea5e9" if is_today else "rgba(255,255,255,0.1)"
+                text_color = "#fff" if is_today else "var(--text)"
+                st.markdown(f"""
+                <div style="min-height: 60px; padding: 4px; border-radius: 8px; background: {bg_color}; border: 1px solid {border_color}; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
+                    <span style="font-weight: {'700' if is_today else '400'}; color: {text_color}; font-size: 14px;">{day}</span>
+                    <div style="width: 100%; margin-top: 2px;">{badges}</div>
+                </div>
+                """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    if month_events:
+        with st.expander("📋 Event Details This Month", expanded=False):
+            for day in sorted(month_events.keys()):
+                for evt in month_events[day]:
+                    st.markdown(f"""
+                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin: 6px 0; border-left: 3px solid var(--primary);">
+                        <strong>{evt['type']}</strong> • {day} {month_name}<br>
+                        <span style="color: var(--muted); font-size: 13px;">🕒 {evt.get('start_time', 'N/A')} | 📍 {evt.get('venue', 'N/A')}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+# ✅ END OF FUNCTION ⬆️
+
+# --- YOUR EXISTING CODE CONTINUES HERE ---
+if "data" not in st.session_state:
+    st.session_state.data = load_data()
+# ... rest of your code ...
+
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
@@ -478,6 +559,8 @@ with active_tab[0]:
     m3.metric("Completed", len(history_events))
     m4.metric("Team Size", len(mems))
     
+    st.markdown("## 🗓️ Event Calendar")
+    render_event_calendar(st.session_state.data.get("events", []), view_proj)
     # Main Dashboard Content
     col1, col2 = st.columns([3, 1])  # wider event section
     
