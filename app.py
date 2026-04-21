@@ -1063,11 +1063,21 @@ if is_chair:
             st.subheader("🗓️ Manage Events")
             # --- 1. CREATE EVENT FORM ---
             with st.form("add_e"):
-                ep, ty, d = st.selectbox("Project", ["SKIT", "BROCHURE"]), st.selectbox("Type", ["Discussion", "Rehearsal", "Work Session", "Production Day"]), st.date_input("Date")
-                st_time, v = st.time_input("Start"), st.text_input("Venue")
-                if st.form_submit_button("Add Event"):
+
+                ep = st.selectbox("Project", ["SKIT", "BROCHURE"])
+                ty = st.selectbox(
+                    "Type",
+                    ["Discussion", "Rehearsal", "Work Session", "Production Day"]
+                )
+                d = st.date_input("Date")
+                st_time = st.time_input("Start")
+                v = st.text_input("Venue")
+            
+                submitted = st.form_submit_button("Add Event")
+            
+                if submitted:
                     log_system_event(f"Created event: {ty}", c_name)
-                
+            
                     st.session_state.data["events"].append({
                         "project": ep,
                         "type": ty,
@@ -1076,7 +1086,7 @@ if is_chair:
                         "venue": v,
                         "status": "Active"
                     })
-                
+            
                     save_data()
                     st.success("Event added!")
                     st.rerun()
