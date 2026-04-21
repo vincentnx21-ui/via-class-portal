@@ -193,6 +193,7 @@ def log_system_event(action, user):
     st.session_state.data["system_logs"].append({
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "user": user,
+        "role": st.session_state.get("u_role", ""),
         "action": action
     })
 
@@ -503,7 +504,7 @@ if not st.session_state.authenticated:
                 st.stop()
 
             # ✅ ADD THIS
-            log_system_event("Logged into portal", name_in)
+            log_system_event(f"Logged in as {st.session_state.u_role}", name_in)
             save_data()
         
             with st.spinner("Entering portal..."):
@@ -1177,5 +1178,5 @@ if is_chair:
                 st.info("No system activity yet.")
             else:
                 for entry in reversed(logs[-50:]):  # last 50 logs
-                    st.code(f"[{entry['time']}] {entry['user']} → {entry['action']}", language="bash")
+                    st.code(f"[{entry['time']}] {entry['user']} ({entry.get('role','')}) → {entry['action']}", language="bash")
                     
