@@ -13,28 +13,61 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-.block-container {
-    padding-top: 2rem;
+:root {
+    --primary: #0ea5e9;
+    --bg-dark: #0f172a;
+    --card: #1e293b;
+    --accent: #38bdf8;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
 }
 
-.stTabs [data-baseweb="tab-list"] {
-    gap: 10px;
+/* GLOBAL */
+.stApp {
+    background: var(--bg-dark);
+    color: var(--text);
 }
 
+/* CARDS */
 div[data-testid="stContainer"] {
+    background: var(--card);
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* BUTTONS */
+.stButton>button {
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    border: none;
+}
+.stButton>button:hover {
+    background: var(--accent);
+    transform: translateY(-1px);
+}
+
+/* METRICS */
+[data-testid="stMetric"] {
+    background: var(--card);
+    padding: 10px;
     border-radius: 12px;
 }
 
-.stButton>button {
-    border-radius: 10px;
-    transition: 0.2s;
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    background: #020617;
+    border-right: 1px solid rgba(255,255,255,0.05);
 }
 
-.stButton>button:hover {
-    transform: scale(1.02);
+/* HEADERS */
+h1, h2, h3 {
+    font-weight: 700;
 }
 </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- 2. FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
@@ -192,8 +225,6 @@ USER_PASSWORDS = {
 }
 CHAIRMAN_SECRET_PW = "chair2026"
 
-import time
-
 if not st.session_state.authenticated:
     st.markdown("""
     <style>
@@ -295,8 +326,22 @@ is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
 is_rep = "Representative" in c_role or any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []))
 
 # --- SIDEBAR UI (Define this ONCE here) ---
-st.sidebar.markdown(f"### 👤 {c_name}")
-view_proj = st.sidebar.selectbox("📁 Select Project", ["SKIT", "BROCHURE"])
+st.sidebar.markdown("## 🎛 Control Panel")
+
+st.sidebar.markdown(f"👤 **{c_name}**")
+st.sidebar.caption(f"Role: {c_role}")
+
+st.sidebar.markdown("---")
+
+view_proj = st.sidebar.radio(
+    "Select Project",
+    ["🎭 SKIT", "📄 BROCHURE"]
+)
+
+# optional: clean value
+view_proj = "SKIT" if "SKIT" in view_proj else "BROCHURE"
+
+st.sidebar.markdown("---")
 
 if st.sidebar.button("🔓 Logout", use_container_width=True):
     st.session_state.authenticated = False
@@ -314,7 +359,16 @@ with active_tab[0]:
     st.title(f"🚀 {view_proj} Project Portal")
     
     # Top Metrics
-    col_a, col_b, col_c = st.columns(3)
+    st.markdown("## 📊 Overview")
+    m1, m2, m3, m4 = st.columns(4)
+    u_key = f"{c_name}_{view_proj}"
+    m = st.session_state.data.get('contributions', {}).get(u_key, 0)
+    
+    m1.metric("Your Hours", f"{m // 60}h {m % 60}m")
+    m2.metric("Upcoming", len(current_events))
+    m3.metric("Completed", len(history_events))
+    m4.metric("Team Size", len(mems))
+    
     if is_chair or is_rep:
         u_key = f"{c_name}_{view_proj}"
         m = st.session_state.data.get('contributions', {}).get(u_key, 0)
@@ -336,23 +390,23 @@ with active_tab[0]:
         all_events = st.session_state.data.get("events", [])
         today = date.today()
         
-current_events = []
-history_events = []
-
-for e in all_events:
-    try:
-        event_date = e.get("date")
-
-        if isinstance(event_date, str):
-            event_date = datetime.fromisoformat(event_date).date()
-
-        if e.get("status") == "Cancelled" or event_date < today:
-            history_events.append(e)
-        else:
-            current_events.append(e)
-
-    except:
-        continue
+        current_events = []
+        history_events = []
+        
+        for e in all_events:
+            try:
+                event_date = e.get("date")
+        
+                if isinstance(event_date, str):
+                    event_date = datetime.fromisoformat(event_date).date()
+        
+                if e.get("status") == "Cancelled" or event_date < today:
+                    history_events.append(e)
+                else:
+                    current_events.append(e)
+        
+            except:
+                continue
         
         # --- CURRENT EVENTS ---
         if not current_events:
@@ -360,9 +414,22 @@ for e in all_events:
         else:
             for i, e in enumerate(current_events):
                 with st.container(border=True):
-                    st.write(f"**{e['type']}**")
-                    st.caption(f"📍 {e.get('venue', 'N/A')} | ⏰ {e['start_time']}")
-    
+                    st.markdown(f"""
+                    <div style="
+                        background:#020617;
+                        padding:16px;
+                        border-radius:12px;
+                        border-left:5px solid #0ea5e9;
+                        margin-bottom:10px;
+                    ">
+                        <h4>{e['type']}</h4>
+                        <p style="color:#94a3b8;">
+                        📍 {e.get('venue','N/A')} <br>
+                        ⏰ {e['start_time']} <br>
+                        📅 {e['date']}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
                     with st.expander("Update My RSVP"):
                         pass
     
@@ -388,7 +455,7 @@ for e in all_events:
         st.subheader("👥 Team Roster")
         mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
         if not mems: 
-            st.write("No members.")
+            st.info("👥 No members yet. Add from Admin panel.")
         for m in mems:
             st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m['name']}**")
             st.caption(f"Focus: {m['sub_role']}")
@@ -550,12 +617,31 @@ with active_tab[3]:
     ts1, ts2 = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
     for proj, t in [("SKIT", ts1), ("BROCHURE", ts2)]:
         with t:
-            for m in [mx for mx in all_m if mx['project'] == proj]:
-                mins = all_c.get(f"{m['name']}_{proj}", 0)
-                c1, c2 = st.columns([1, 3])
-                c1.write(f"**{m['name']}**")
-                progress_val = max(0.0, min(1.0, mins / 300))
-                c2.progress(progress_val, text=f"{mins//60}h {mins%60}m")
+            members_proj = [mx for mx in all_m if mx['project'] == proj]
+    
+            if not members_proj:
+                st.info("No members in this project yet.")
+            else:
+                for m in members_proj:
+                    mins = all_c.get(f"{m['name']}_{proj}", 0)
+                    progress_val = max(0.0, min(1.0, mins / 300))
+    
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="
+                            background:#020617;
+                            padding:14px;
+                            border-radius:10px;
+                            margin-bottom:10px;
+                        ">
+                            <b>{m['name']}</b><br>
+                            <span style="color:#94a3b8;">
+                            {mins//60}h {mins%60}m / 5h goal
+                            </span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                        st.progress(progress_val)
 
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
