@@ -778,7 +778,7 @@ with active_tab[2]:
                     "user": c_name,
                     "date": str(date.today()),
                     "minutes": 0,
-                    "task": f"Created event: {ty}",
+                    log_system_event(f"Created event: {ty}", c_name)
                     "project": ep,
                     "comments": []
                     })
