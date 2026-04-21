@@ -730,7 +730,8 @@ with active_tab[3]:
 # --- TAB 4: DIRECTORY ---
 with active_tab[4]:
     st.title("📁 Official Class Directory")
-    all_m, all_c, all_l = st.session_state.data["members"], st.session_state.data["contributions"], st.session_state.data["logs"]
+    all_m = st.session_state.data.get("members", [])
+    all_c = st.session_state.data.get("contributions", {})
     m1, m2, m3 = st.columns(3)
     m1.metric("Total Members", len(all_m))
     avg = sum(all_c.values()) // len(all_m) if all_m else 0
@@ -739,56 +740,72 @@ with active_tab[4]:
 
     if not all_m: st.warning("Roster empty.")
     else:
-        
-
         all_m = st.session_state.data["members"]
         all_c = st.session_state.data["contributions"]
         
         # STEP 1: group people (no duplicates)
         people = {}
-        
+
         for m in all_m:
-            name = m["name"]
-        
+            name = m["name"].strip()
+    
             if name not in people:
                 people[name] = {
                     "projects": set(),
                     "roles": set()
                 }
-        
-            people[name]["projects"].add(m.get("project", "CLASS"))
+    
+            # treat CLASS as global (belongs to all projects)
+            proj = m.get("project")
+            role_type = m.get("role_type")
+    
+            if role_type == "CLASS":
+                people[name]["projects"].add("SKIT")
+                people[name]["projects"].add("BROCHURE")
+            else:
+                people[name]["projects"].add(proj)
+    
             people[name]["roles"].add(m.get("sub_role", "N/A"))
         
         # STEP 2: build summary with TOTAL TIME
         summary = []
-        
+
         for name, data in people.items():
-        
             total_minutes = 0
-        
+    
             for p in data["projects"]:
                 key = f"{name}_{p}"
                 total_minutes += all_c.get(key, 0)
-        
+    
             summary.append({
                 "NAME": name,
-                "PROJECTS": " | ".join(data["projects"]),
-                "ROLE": " | ".join(data["roles"]),
+                "PROJECTS": " | ".join(sorted(data["projects"])),
+                "ROLE": " | ".join(sorted(data["roles"])),
                 "VIA TIME": f"{total_minutes//60}h {total_minutes%60}m",
                 "STATUS": "✅ Active" if total_minutes > 0 else "⏳ No Logs"
             })
-        
+    
         df = pd.DataFrame(summary)
         
         # filters (keep your existing UI)
         f1, f2 = st.columns([2, 1])
-        s, pf = f1.text_input("🔍 Search"), f2.selectbox("Filter", ["All", "SKIT", "BROCHURE", "CLASS"])
-        
+        s = f1.text_input("🔍 Search")
+        pf = f2.selectbox("Filter", ["All", "SKIT", "BROCHURE"])
+    
         if s:
             df = df[df["NAME"].str.contains(s, case=False)]
-        
+    
+        if pf != "All":
+            df = df[df["PROJECTS"].str.contains(pf)]
+
+        # FIXED METRICS
+        st.metric("Total Unique Members", len(people))
+
+        avg = sum(all_c.values()) // len(people) if people else 0
+        st.metric("Average Time", f"{avg//60}h {avg%60}m")
+    
         st.dataframe(df, use_container_width=True, hide_index=True)
-        st.download_button("📥 Download CSV", df.to_csv(index=False), f"VIA_{date.today()}.csv", "text/csv")
+        st.download_button("📥 Download CSV", df.to_csv(index=False), "via.csv", "text/csv")
 
 # --- TAB 5: ADMIN ---
 if is_chair:
