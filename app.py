@@ -197,7 +197,7 @@ def log_system_event(action, user):
     })
 
 def render_event_calendar(events, selected_project):
-    """Compact framed calendar with circular buttons & color-coded events"""
+    """Framed Calendar with Circular Buttons Inside"""
     import calendar
     from datetime import datetime, date, timedelta
 
@@ -210,7 +210,7 @@ def render_event_calendar(events, selected_project):
     month_events = {}
     reminders = []
 
-    # Filter & sort events
+    # Filter events
     for e in events:
         try:
             evt_date = e.get("date")
@@ -225,11 +225,11 @@ def render_event_calendar(events, selected_project):
                     month_events[day] = []
                 month_events[day].append(e)
 
-                # Check for upcoming reminders
+                # Reminder Logic
                 if evt_date == tomorrow:
-                    reminders.append(f"⚠️ **Tomorrow**: {e['type']} at {e.get('start_time', 'N/A')}")
+                    reminders.append(f"⚠️ **Tomorrow**: {e['type']} ({e.get('start_time', 'N/A')})")
                 elif evt_date == day_after:
-                    reminders.append(f"📅 **Day After**: {e['type']} at {e.get('start_time', 'N/A')}")
+                    reminders.append(f"📅 **Day After**: {e['type']} ({e.get('start_time', 'N/A')})")
         except:
             continue
 
@@ -239,59 +239,61 @@ def render_event_calendar(events, selected_project):
     if 'cal_day_selected' not in st.session_state:
         st.session_state.cal_day_selected = None
 
-    #  CSS: Frame + Circular Buttons
+    # --- CSS FOR FRAMED & CIRCULAR DESIGN ---
     st.markdown("""
     <style>
-    .cal-frame {
-        background: var(--card);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    /* The Main Frame */
+    .cal-main-frame {
+        background: #0f172a;
+        border: 2px solid #334155;
+        border-radius: 16px;
+        padding: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        margin-bottom: 20px;
     }
-    .cal-circles button {
+    
+    /* Circular Buttons */
+    div[data-testid="stColumn"] button[kind="secondary"] {
         border-radius: 50% !important;
         width: 36px !important;
         height: 36px !important;
-        padding: 0 !important;
         min-height: 36px !important;
-        font-size: 14px !important;
-        background: transparent !important;
-        border: 1.5px solid rgba(255,255,255,0.15) !important;
-        color: var(--text) !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        margin: 0 auto !important;
+        background: transparent !important;
+        font-size: 14px !important;
         transition: all 0.2s ease;
     }
-    .cal-circles button:hover {
-        border-color: var(--primary) !important;
-        transform: scale(1.15);
+    div[data-testid="stColumn"] button[kind="secondary"]:hover {
+        background: rgba(255,255,255,0.1) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # 🔔 Reminders Banner
+    # --- START FRAME ---
+    st.markdown('<div class="cal-main-frame">', unsafe_allow_html=True)
+
+    # Title
+    st.markdown(f"<h3 style='text-align:center; margin-bottom:10px; color:var(--accent);'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
+
+    # Reminders (Inside Frame)
     if reminders:
-        for r in reminders:
-            st.warning(r, icon="🔔")
+        with st.container(border=True):
+            for r in reminders:
+                st.warning(r, icon="")
 
-    # 🖼️ Framed Container
-    st.markdown('<div class="cal-frame">', unsafe_allow_html=True)
-    st.markdown(f"**📅 {month_name} {current_year}**")
-
-    # Days Header
+    # Day Headers
     cols = st.columns(7)
-    for i, d in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-        cols[i].markdown(f"<div style='text-align:center; font-size:11px; color:var(--muted); font-weight:600;'>{d}</div>", unsafe_allow_html=True)
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    for i, d in enumerate(days):
+        cols[i].markdown(f"<div style='text-align:center; color:#94a3b8; font-size:12px; font-weight:600;'>{d}</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:5px'></div>", unsafe_allow_html=True)
 
-    # Circular Buttons Wrapper
-    st.markdown('<div class="cal-circles">', unsafe_allow_html=True)
-
+    # --- GRID LOOP ---
     for week in cal:
         cols = st.columns(7)
         for i, day in enumerate(week):
@@ -302,49 +304,60 @@ def render_event_calendar(events, selected_project):
                 with cols[i]:
                     has_event = day in month_events
                     is_today = day == today.day
+                    evt_date_obj = datetime(current_year, current_month, day).date()
+                    is_past = evt_date_obj < today
 
                     if has_event:
-                        evt_date_obj = datetime(current_year, current_month, day).date()
-                        is_past = evt_date_obj < today
+                        # Determine Style based on Time
+                        if is_past:
+                            border = "1px dashed #64748b !important"
+                            color = "#64748b !important"
+                            icon = "⚫"
+                        elif is_today:
+                            border = "2px solid #ffffff !important"
+                            color = "#ffffff !important"
+                            icon = "⭐"
+                        else:
+                            border = "1px solid #38bdf8 !important"
+                            color = "#38bdf8 !important"
+                            icon = ""
 
-                        # Dynamic color per button
-                        txt_color = "var(--muted)" if is_past else ("#fff" if is_today else "var(--accent)")
-                        brd_color = "rgba(148,163,184,0.3)" if is_past else ("#38bdf8" if is_today else "rgba(56,189,248,0.4)")
-                        icon = "⚫" if is_past else ("⭐" if is_today else "🔵")
-
-                        # Inject color CSS for this specific button
+                        # Inject CSS for THIS specific button
                         st.markdown(f"""
                         <style>
-                        button[id^="cal_btn_{day}"] {{
-                            color: {txt_color} !important;
-                            border-color: {brd_color} !important;
+                        button[id="cal_btn_{day}"] {{
+                            border: {border};
+                            color: {color};
                         }}
                         </style>
                         """, unsafe_allow_html=True)
 
+                        # Button
                         if st.button(f"{day}{icon}", key=f"cal_btn_{day}"):
                             st.session_state.cal_day_selected = day
+
                     else:
-                        # No event: plain text
-                        color = "#38bdf8" if is_today else "var(--muted)"
+                        # No Event (Plain Text)
+                        color = "#ffffff" if is_today else "#64748b"
                         st.markdown(
                             f"<div style='text-align:center; height:36px; display:flex; align-items:center; justify-content:center; "
-                            f"color:{color}; font-size:13px;'>{day}</div>", unsafe_allow_html=True)
+                            f"color:{color}; font-size:14px;'>{day}</div>", 
+                            unsafe_allow_html=True
+                        )
 
-    st.markdown("</div>", unsafe_allow_html=True)  # Close circles
-    st.markdown("</div>", unsafe_allow_html=True)  # Close frame
+    st.markdown('</div>', unsafe_allow_html=True) # --- CLOSE FRAME ---
 
-    # 📋 Details Panel (appears when a day is clicked)
+    # --- DETAILS PANEL (Outside Frame) ---
     if st.session_state.get('cal_day_selected') and st.session_state.cal_day_selected in month_events:
         with st.container(border=True):
-            st.markdown(f"**📅 {st.session_state.cal_day_selected} {month_name}**")
+            st.markdown(f"**📅 Events on {st.session_state.cal_day_selected} {month_name}**")
             for evt in month_events[st.session_state.cal_day_selected]:
-                st.markdown(f" **{evt['type']}**\n\n🕒 {evt.get('start_time', 'N/A')} | 📍 {evt.get('venue', 'N/A')}")
+                st.markdown(f"🔹 **{evt['type']}**\n\n🕒 {evt.get('start_time', 'N/A')} | 📍 {evt.get('venue', 'N/A')}")
             
-            if st.button("✕ Close", key="close_cal", type="secondary"):
+            if st.button("Close", key="close_cal", type="secondary"):
                 st.session_state.cal_day_selected = None
                 st.rerun()
-
+                
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
