@@ -4,6 +4,7 @@ from datetime import datetime, time, date
 import firebase_admin
 from firebase_admin import credentials, db
 import time
+from collections import defaultdict
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
@@ -738,21 +739,53 @@ with active_tab[4]:
 
     if not all_m: st.warning("Roster empty.")
     else:
-        summary = []
+        
+
+        all_m = st.session_state.data["members"]
+        all_c = st.session_state.data["contributions"]
+        
+        # STEP 1: group people (no duplicates)
+        people = {}
+        
         for m in all_m:
-            ukey = f"{m['name']}_{m['project']}"
-            utasks = [
-                lx['task']
-                for lx in all_l
-                if lx['user'] == m['name']
-            ]
-            summary.append({"NAME": m['name'], "PROJECT": m['project'], "ROLE": m['sub_role'], "VIA TIME": f"{all_c.get(ukey,0)//60}h {all_c.get(ukey,0)%60}m", "LATEST TASKS": " | ".join(utasks[-2:]) if utasks else "None", "STATUS": "✅ Active" if utasks else "⏳ No Logs"})
+            name = m["name"]
+        
+            if name not in people:
+                people[name] = {
+                    "projects": set(),
+                    "roles": set()
+                }
+        
+            people[name]["projects"].add(m.get("project", "CLASS"))
+            people[name]["roles"].add(m.get("sub_role", "N/A"))
+        
+        # STEP 2: build summary with TOTAL TIME
+        summary = []
+        
+        for name, data in people.items():
+        
+            total_minutes = 0
+        
+            for p in data["projects"]:
+                key = f"{name}_{p}"
+                total_minutes += all_c.get(key, 0)
+        
+            summary.append({
+                "NAME": name,
+                "PROJECTS": " | ".join(data["projects"]),
+                "ROLE": " | ".join(data["roles"]),
+                "VIA TIME": f"{total_minutes//60}h {total_minutes%60}m",
+                "STATUS": "✅ Active" if total_minutes > 0 else "⏳ No Logs"
+            })
         
         df = pd.DataFrame(summary)
+        
+        # filters (keep your existing UI)
         f1, f2 = st.columns([2, 1])
-        s, pf = f1.text_input("🔍 Search"), f2.selectbox("Filter", ["All", "SKIT", "BROCHURE"])
-        if s: df = df[df["NAME"].str.contains(s, False)]
-        if pf != "All": df = df[df["PROJECT"] == pf]
+        s, pf = f1.text_input("🔍 Search"), f2.selectbox("Filter", ["All", "SKIT", "BROCHURE", "CLASS"])
+        
+        if s:
+            df = df[df["NAME"].str.contains(s, case=False)]
         
         st.dataframe(df, use_container_width=True, hide_index=True)
         st.download_button("📥 Download CSV", df.to_csv(index=False), f"VIA_{date.today()}.csv", "text/csv")
