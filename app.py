@@ -458,9 +458,11 @@ with active_tab[0]:
 
     # ✅ DEFINE MEMBERS BEFORE USING
     mems = [
-        for m in st.session_state.data.get("members", []):
-            if "role_type" not in m:
-                m["role_type"] = "PROJECT"
+    m for m in st.session_state.data.get("members", [])
+        if (
+            m.get("role_type", "PROJECT") == "CLASS"
+            or m.get("project") == view_proj
+        )
     ]
 
     # ✅ METRICS
