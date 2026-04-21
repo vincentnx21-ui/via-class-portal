@@ -457,7 +457,10 @@ with active_tab[0]:
             continue
 
     # ✅ DEFINE MEMBERS BEFORE USING
-    mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
+    mems = [
+        m for m in st.session_state.data["members"]
+        if m["role_type"] == "CLASS" or m["project"] == view_proj
+    ]
 
     # ✅ METRICS
     st.markdown("## 📊 Overview")
@@ -682,7 +685,8 @@ with active_tab[3]:
                     bm = st.number_input("Minutes", 1, step=5)
                     ra = st.text_input("Reason")
                     if st.form_submit_button("Apply Bonus") and tu != "None":
-                        ukey = f"{tu}_{tp}"
+                        selected_member = next(m for m in all_m if m["name"] == tu)
+                        ukey = f"{tu}_{selected_member['project']}"
                         st.session_state.data["contributions"][ukey] = st.session_state.data["contributions"].get(ukey, 0) + bm
                         st.session_state.data["logs"].append({"log_id": f"b_{datetime.now().strftime('%H%M%S')}", "user": tu, "date": str(date.today()), "minutes": bm, "task": f"BONUS: {ra}", "project": tp, "comments": []})
                         save_data(); st.rerun()
@@ -690,7 +694,10 @@ with active_tab[3]:
     ts1, ts2 = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
     for proj, t in [("SKIT", ts1), ("BROCHURE", ts2)]:
         with t:
-            members_proj = [mx for mx in all_m if mx['project'] == proj]
+            members_proj = [
+                m for m in all_m
+                if m.get("role_type") == "CLASS" or m.get("project") == proj
+            ]
     
             if not members_proj:
                 st.info("No members in this project yet.")
@@ -731,7 +738,11 @@ with active_tab[4]:
         summary = []
         for m in all_m:
             ukey = f"{m['name']}_{m['project']}"
-            utasks = [lx['task'] for lx in all_l if lx['user'] == m['name'] and lx.get('project') == m['project']]
+            utasks = [
+                lx['task']
+                for lx in all_l
+                if lx['user'] == m['name']
+            ]
             summary.append({"NAME": m['name'], "PROJECT": m['project'], "ROLE": m['sub_role'], "VIA TIME": f"{all_c.get(ukey,0)//60}h {all_c.get(ukey,0)%60}m", "LATEST TASKS": " | ".join(utasks[-2:]) if utasks else "None", "STATUS": "✅ Active" if utasks else "⏳ No Logs"})
         
         df = pd.DataFrame(summary)
@@ -763,7 +774,7 @@ if is_chair:
             with st.form("add_member_form"):
                 cn, cp = st.columns(2)
                 n = cn.text_input("Name")
-                p = cp.selectbox("Project", ["SKIT", "BROCHURE"])
+                p = cp.selectbox("Project", ["SKIT", "BROCHURE", "CLASS"])
         
                 cr, cs = st.columns(2)
                 r = cr.checkbox("Rep?")
@@ -773,9 +784,11 @@ if is_chair:
                     if not n.strip():
                         st.error("Name cannot be empty")
                     else:
+                        role_type = "CLASS" if p == "CLASS" else "PROJECT"
                         st.session_state.data["members"].append({
                             "name": n,
-                            "project": p,
+                            "project": None if role_type == "CLASS" else p,
+                            "role_type": role_type,
                             "is_rep": r,
                             "sub_role": s
                         })
