@@ -596,7 +596,7 @@ with col1:
         st.rerun()
 
 with col2:
-    if st.button("📊 Save"):
+    if st.button("📊 Sync"):
         save_data()
         st.success("Saved!")
 
