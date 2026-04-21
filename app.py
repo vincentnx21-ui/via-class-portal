@@ -3,8 +3,6 @@ import pandas as pd
 from datetime import datetime, time, date
 import firebase_admin
 from firebase_admin import credentials, db
-import json
-import os
 import time
 
 # --- 1. CONFIGURATION ---
@@ -200,7 +198,11 @@ def log_system_event(action, user):
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
-generate_event_reports()
+if not st.session_state.get("auto_generated"):
+    generate_event_reports()
+    save_data()
+    st.session_state.auto_generated = True
+
 st.session_state._migrated = True
 
 for log in st.session_state.data.get("logs", []):
@@ -357,29 +359,50 @@ active_tab = st.tabs(tabs_list)
 # --- TAB 0: DASHBOARD ---
 with active_tab[0]: 
     st.title(f"🚀 {view_proj} Project Portal")
-    
-    # Top Metrics
+
+    # ✅ PREP DATA FIRST
+    all_events = [
+        e for e in st.session_state.data.get("events", [])
+        if e.get("project") == view_proj
+    ]    
+    today = date.today()
+
+    current_events = []
+    history_events = []
+
+    for e in all_events:
+        try:
+            event_date = e.get("date")
+
+            if isinstance(event_date, str):
+                event_date = datetime.fromisoformat(event_date).date()
+            elif isinstance(event_date, datetime):
+                event_date = event_date.date()
+            # else assume it's already date
+
+            if e.get("status") == "Cancelled" or event_date < today:
+                history_events.append(e)
+            else:
+                current_events.append(e)
+
+        except:
+            continue
+
+    # ✅ DEFINE MEMBERS BEFORE USING
+    mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
+
+    # ✅ METRICS
     st.markdown("## 📊 Overview")
     m1, m2, m3, m4 = st.columns(4)
+
     u_key = f"{c_name}_{view_proj}"
     m = st.session_state.data.get('contributions', {}).get(u_key, 0)
-    
+
     m1.metric("Your Hours", f"{m // 60}h {m % 60}m")
     m2.metric("Upcoming", len(current_events))
     m3.metric("Completed", len(history_events))
     m4.metric("Team Size", len(mems))
     
-    if is_chair or is_rep:
-        u_key = f"{c_name}_{view_proj}"
-        m = st.session_state.data.get('contributions', {}).get(u_key, 0)
-        col_a.metric(f"Your {view_proj} Hours", f"{m // 60}h {m % 60}m")
-    else: 
-        col_a.metric("Role", "Faculty Observer")
-    
-    events = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
-    col_b.metric("Upcoming Events", len([e for e in events if e.get("status") != "Cancelled"]))
-    col_c.metric("Project Status", "Active", delta="On Track")
-
     # Main Dashboard Content
     col1, col2 = st.columns([3, 1])  # wider event section
     
@@ -387,33 +410,14 @@ with active_tab[0]:
         st.subheader("📅 Event RSVP")
 
         # ✅ MOVE EVERYTHING BELOW INSIDE col1
-        all_events = st.session_state.data.get("events", [])
-        today = date.today()
         
-        current_events = []
-        history_events = []
-        
-        for e in all_events:
-            try:
-                event_date = e.get("date")
-        
-                if isinstance(event_date, str):
-                    event_date = datetime.fromisoformat(event_date).date()
-        
-                if e.get("status") == "Cancelled" or event_date < today:
-                    history_events.append(e)
-                else:
-                    current_events.append(e)
-        
-            except:
-                continue
         
         # --- CURRENT EVENTS ---
         if not current_events:
-            st.info("No upcoming events.")
+            st.info("📅 No upcoming events. Check back later or contact your rep.")
         else:
             for i, e in enumerate(current_events):
-                with st.container(border=True):
+                with st.container():
                     st.markdown(f"""
                     <div style="
                         background:#020617;
@@ -430,8 +434,7 @@ with active_tab[0]:
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
-                    with st.expander("Update My RSVP"):
-                        pass
+                    st.caption("RSVP feature coming soon")
     
         # --- HISTORY ---
         st.divider()
@@ -453,7 +456,6 @@ with active_tab[0]:
                     
     with col2:
         st.subheader("👥 Team Roster")
-        mems = [m for m in st.session_state.data["members"] if m["project"] == view_proj]
         if not mems: 
             st.info("👥 No members yet. Add from Admin panel.")
         for m in mems:
@@ -463,7 +465,10 @@ with active_tab[0]:
 # --- TAB 1: ATTENDANCE ---
 with active_tab[1]:
     st.title("✅ Attendance Tracker")
-    evs = [e for e in st.session_state.data["events"] if e["project"] == view_proj]
+    evs = [
+    e for e in st.session_state.data["events"]
+    if e["project"] == view_proj and e.get("status") != "Cancelled"
+    ]
     if evs:
         sel_list = [f"{e['type']} ({e['date']})" for e in evs]
         sel = st.selectbox("Select Event", sel_list)
@@ -740,13 +745,13 @@ if is_chair:
                 st_time, v = st.time_input("Start"), st.text_input("Venue")
                 if st.form_submit_button("Add Event"):
                     log_system_event(f"Created event: {ty}", c_name)
-                    st.session_state.data["events"].append({
-                        "project": ep,
-                        "type": ty,
-                        "date": d.isoformat(),              # stored as string
-                        "venue": v,
-                        "start_time": st_time.strftime("%H:%M"),   # FIXED
-                        "status": "Active"
+                    st.session_state.data["logs"].append({
+                        "log_id": ...,
+                        "user": an,
+                        "date": str(date.today()),
+                        "minutes": am,
+                        "task": f"ADMIN ADJ: {ar}",
+                        "project": ap
                     })
                     save_data(); st.rerun()
 
