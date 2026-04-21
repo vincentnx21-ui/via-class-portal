@@ -1171,9 +1171,6 @@ if is_chair:
                     
         with at6:
             st.subheader("🖥️ System Activity Terminal")
-
-            if st.button("🔄 Refresh Logs"):
-                st.rerun()
             
             logs = st.session_state.data.get("system_logs", [])
             
