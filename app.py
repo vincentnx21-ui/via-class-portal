@@ -8,63 +8,84 @@ from collections import defaultdict
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
+# --- THEME TOGGLE ---
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+theme_toggle = st.toggle("🌗 Dark Mode", value=(st.session_state.theme == "dark"))
+
+st.session_state.theme = "dark" if theme_toggle else "light"
 
 # --- CUSTOM CSS ---
-st.markdown("""
+theme = st.session_state.theme
+
+if theme == "dark":
+    bg = "#0f172a"
+    card = "#1e293b"
+    text = "#e2e8f0"
+    muted = "#94a3b8"
+    sidebar = "#020617"
+else:
+    bg = "#f8fafc"
+    card = "#ffffff"
+    text = "#0f172a"
+    muted = "#475569"
+    sidebar = "#e2e8f0"
+
+st.markdown(f"""
 <style>
-:root {
+:root {{
     --primary: #0ea5e9;
-    --bg-dark: #0f172a;
-    --card: #1e293b;
     --accent: #38bdf8;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-}
+    --bg: {bg};
+    --card: {card};
+    --text: {text};
+    --muted: {muted};
+    --sidebar: {sidebar};
+}}
 
 /* GLOBAL */
-.stApp {
-    background: var(--bg-dark);
+.stApp {{
+    background: var(--bg);
     color: var(--text);
-}
+}}
 
 /* CARDS */
-div[data-testid="stContainer"] {
-    background: var(--card);
+div[data-testid="stContainer"] {{
+    
     padding: 16px;
     border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.05);
-}
+    border: 1px solid rgba(0,0,0,0.05);
+}}
 
 /* BUTTONS */
-.stButton>button {
+.stButton>button {{
     background: var(--primary);
     color: white;
     border-radius: 10px;
     font-weight: 600;
     border: none;
-}
-.stButton>button:hover {
+}}
+.stButton>button:hover {{
     background: var(--accent);
-    transform: translateY(-1px);
-}
-
-/* METRICS */
-[data-testid="stMetric"] {
-    background: var(--card);
-    padding: 10px;
-    border-radius: 12px;
-}
+}}
 
 /* SIDEBAR */
-section[data-testid="stSidebar"] {
-    background: #020617;
-    border-right: 1px solid rgba(255,255,255,0.05);
-}
+section[data-testid="stSidebar"] {{
+    background: var(--sidebar);
+}}
 
-/* HEADERS */
-h1, h2, h3 {
-    font-weight: 700;
-}
+/* TEXT */
+h1, h2, h3 {{
+    color: var(--text);
+}}
+
+/* METRICS */
+[data-testid="stMetric"] {{
+    
+    border-radius: 12px;
+    padding: 10px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -296,7 +317,7 @@ def render_event_calendar(events, selected_project):
     # Headers
     cols = st.columns(7)
     for i, d in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-        cols[i].markdown(f"<div style='text-align:center; color:#94a3b8; font-size:11px; font-weight:600; padding:8px 0;'>{d}</div>", unsafe_allow_html=True)
+        cols[i].markdown(f"<div style='text-align:center; color: var(--muted); font-size:11px; font-weight:600; padding:8px 0;'>{d}</div>", unsafe_allow_html=True)
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
@@ -579,7 +600,7 @@ st.sidebar.markdown("<div class='sidebar-title'>🎛 Control Panel</div>", unsaf
 st.sidebar.markdown(f"""
 <div class="user-card">
     <div style="font-size:16px; font-weight:700;">👤 {c_name}</div>
-    <div style="color:#94a3b8; font-size:13px;">{c_role}</div>
+    <div style="color: var(--muted); font-size:13px;">{c_role}</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -706,14 +727,14 @@ with active_tab[0]:
                 with st.container():
                     st.markdown(f"""
                     <div style="
-                        background:#020617;
+                        background: var(--card);
                         padding:16px;
                         border-radius:12px;
                         border-left:5px solid #0ea5e9;
                         margin-bottom:10px;
                     ">
                         <h4>{e['type']}</h4>
-                        <p style="color:#94a3b8;">
+                        <p style="color: var(--muted);">
                         📍 {e.get('venue','N/A')} <br>
                         ⏰ {e['start_time']} <br>
                         📅 {e['date']}
@@ -948,13 +969,13 @@ with active_tab[3]:
                     with st.container():
                         st.markdown(f"""
                         <div style="
-                            background:#020617;
+                            background: var(--card);
                             padding:14px;
                             border-radius:10px;
                             margin-bottom:10px;
                         ">
                             <b>{m.get('name')}</b><br>
-                            <span style="color:#94a3b8;">
+                            <span style="color: var(--muted);">
                             {mins//60}h {mins%60}m / 5h goal
                             </span>
                         </div>
