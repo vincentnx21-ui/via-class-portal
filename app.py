@@ -5,6 +5,9 @@ import firebase_admin
 from firebase_admin import credentials, db
 import time
 from collections import defaultdict
+import pytz
+
+SG_TZ = pytz.timezone("Asia/Singapore")
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
@@ -32,66 +35,80 @@ else:
     muted = "#475569"
     sidebar = "#e2e8f0"
 
-st.markdown("""
+st.markdown(f"""
 <style>
-:root {
+:root {{
     --primary: #0ea5e9;
     --accent: #38bdf8;
-}
 
-/* DARK MODE */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #0f172a;
-        --card: #1e293b;
-        --text: #e2e8f0;
-        --muted: #94a3b8;
-    }
-}
+    --bg: {bg};
+    --card: {card};
+    --text: {text};
+    --muted: {muted};
+}}
 
-/* LIGHT MODE */
-@media (prefers-color-scheme: light) {
-    :root {
-        --bg: #f8fafc;
-        --card: #ffffff;
-        --text: #0f172a;
-        --muted: #475569;
-    }
-}
+/* FORCE FULL APP THEME */
+html, body, [class*="css"] {{
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}}
 
-/* APPLY EVERYWHERE */
-.stApp {
-    background: var(--bg);
-    color: var(--text);
-}
+/* MAIN APP */
+.stApp {{
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}}
 
-/* FORCE ALL TEXT TO FOLLOW THEME */
-html, body, p, span, div, label, h1, h2, h3, h4, h5 {
+/* TEXT FIX (THIS IS THE KEY FIX) */
+p, span, div, label, h1, h2, h3, h4, h5, h6 {{
     color: var(--text) !important;
 }
 
+/* INPUTS */
+input, textarea {{
+    color: var(--text) !important;
+    background-color: var(--card) !important;
+}}
+
+/* SELECTBOX */
+div[data-baseweb="select"] > div {{
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+}}
+
 /* CARDS */
-div[data-testid="stContainer"] {
-    background: var(--card);
+div[data-testid="stContainer"] {{
+    background: var(--card) !important;
     border-radius: 14px;
     padding: 16px;
-}
+}}
 
 /* SIDEBAR */
-section[data-testid="stSidebar"] {
-    background: var(--card);
-}
+section[data-testid="stSidebar"] {{
+    background: {sidebar} !important;
+}}
 
 /* MUTED TEXT */
-small, .stCaption {
+small, .stCaption {{
     color: var(--muted) !important;
-}
+}}
 
 /* BUTTONS */
-.stButton>button {
-    background: var(--primary);
-    color: white;
-}
+.stButton > button {{
+    background: var(--primary) !important;
+    color: white !important;
+    border-radius: 10px;
+}}
+
+/* DATAFRAME FIX */
+[data-testid="stDataFrame"] {{
+    color: var(--text) !important;
+}}
+
+/* CALENDAR FIX */
+.cal-container {{
+    background: var(--card) !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -218,7 +235,7 @@ def log_system_event(action, user):
         st.session_state.data["system_logs"] = []
 
     st.session_state.data["system_logs"].append({
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "log_id": f"b_{datetime.now(SG_TZ).strftime('%H%M%S')}",
         "user": user,
         "action": action
     })
@@ -430,7 +447,7 @@ st.session_state._migrated = True
 for log in st.session_state.data.get("logs", []):
     for c in log.get("comments", []):
         if "comment_id" not in c:
-            c["comment_id"] = str(datetime.now().timestamp())
+            c["comment_id"] = str(datetime.now(SG_TZ).timestamp())
                 
 required_keys = ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance"]
 for key in required_keys:
@@ -742,7 +759,7 @@ with active_tab[0]:
                         <h4>{e['type']}</h4>
                         <p style="color: var(--muted);">
                         📍 {e.get('venue','N/A')} <br>
-                        ⏰ {e['start_time']} <br>
+                        ⏰ {e['start_time'].strftime("%I:%M %p")} <br>
                         📅 {e['date']}
                         </p>
                     </div>
@@ -819,7 +836,7 @@ with active_tab[2]:
                     log_system_event(f"Added log: {lt}", c_name)
                 
                     st.session_state.data["logs"].append({
-                        "log_id": f"event_{datetime.now().timestamp()}",
+                        "log_id": f"event_{datetime.now(SG_TZ).timestamp()}",
                         "user": c_name,
                         "date": str(ld),
                         "minutes": lm,
@@ -943,7 +960,7 @@ with active_tab[3]:
                             )
                         
                             st.session_state.data["logs"].append({
-                                "log_id": f"b_{datetime.now().strftime('%H%M%S')}",
+                                "log_id": f"b_{datetime.now(SG_TZ).strftime('%H%M%S')}",
                                 "user": tu,
                                 "date": str(date.today()),
                                 "minutes": bm,
@@ -1238,7 +1255,7 @@ if is_chair:
                 if st.form_submit_button("🔨 Apply Adjustment") and an != "None":
                     ukey = f"{an}_{ap}"
                     st.session_state.data["contributions"][ukey] = st.session_state.data["contributions"].get(ukey, 0) + am
-                    st.session_state.data["logs"].append({"log_id": f"adm_{datetime.now().strftime('%H%M%S')}", "user": an, "date": str(date.today()), "minutes": am, "task": f"ADMIN ADJ: {ar}", "project": ap})
+                    st.session_state.data["logs"].append({"log_id": f"adm_{datetime.now(SG_TZ).strftime('%H%M%S')}", "user": an, "date": str(date.today()), "minutes": am, "task": f"ADMIN ADJ: {ar}", "project": ap})
                     save_data(); st.success(f"Adjusted {an}!"); st.rerun()
 
         # --- NEW RESET LOGIC ---
