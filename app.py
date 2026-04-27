@@ -35,7 +35,7 @@ else:
     muted = "#475569"
     sidebar = "#e2e8f0"
 
-st.markdown(f"""
+    st.markdown(f"""
 <style>
 :root {{
     --primary: #0ea5e9;
@@ -47,71 +47,60 @@ st.markdown(f"""
     --muted: {muted};
 }}
 
-/* FORCE FULL APP THEME */
 html, body, [class*="css"] {{
     background-color: var(--bg) !important;
     color: var(--text) !important;
 }}
 
-/* MAIN APP */
 .stApp {{
     background: var(--bg) !important;
     color: var(--text) !important;
 }}
 
-/* TEXT FIX (THIS IS THE KEY FIX) */
 p, span, div, label, h1, h2, h3, h4, h5, h6 {{
     color: var(--text) !important;
-}
+}}
 
-/* INPUTS */
 input, textarea {{
     color: var(--text) !important;
     background-color: var(--card) !important;
 }}
 
-/* SELECTBOX */
 div[data-baseweb="select"] > div {{
     background-color: var(--card) !important;
     color: var(--text) !important;
 }}
 
-/* CARDS */
 div[data-testid="stContainer"] {{
     background: var(--card) !important;
     border-radius: 14px;
     padding: 16px;
 }}
 
-/* SIDEBAR */
 section[data-testid="stSidebar"] {{
     background: {sidebar} !important;
 }}
 
-/* MUTED TEXT */
 small, .stCaption {{
     color: var(--muted) !important;
 }}
 
-/* BUTTONS */
 .stButton > button {{
     background: var(--primary) !important;
     color: white !important;
     border-radius: 10px;
 }}
 
-/* DATAFRAME FIX */
 [data-testid="stDataFrame"] {{
     color: var(--text) !important;
 }}
 
-/* CALENDAR FIX */
 .cal-container {{
     background: var(--card) !important;
 }}
 </style>
 """, unsafe_allow_html=True)
-
+    
 # --- 2. FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
     try:
