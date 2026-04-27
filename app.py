@@ -880,7 +880,7 @@ with active_tab[3]:
             with st.expander("➕ Add Project Bonus"):
                 with st.form("bonus_f"):
                     tp = st.selectbox("Project", ["SKIT", "BROCHURE"], key="b1")
-                    unames = [m['name'] for m in all_m if m['project'] == tp]
+                    unames = [m['name'] for m in all_m if m.get('project') == tp]
                     tu = st.selectbox("Student", unames if unames else ["None"], key="b2")
                     bm = st.number_input("Minutes", 1, step=5)
                     ra = st.text_input("Reason")
