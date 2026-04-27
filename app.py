@@ -15,7 +15,7 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 if "theme" not in st.session_state:
     st.session_state.theme = "dark"
 
-theme_toggle = st.toggle("🌗 Dark Mode", value=(st.session_state.theme == "dark"))
+theme_toggle = st.toggle("🌗 Dark Mode", value=True)
 
 st.session_state.theme = "dark" if theme_toggle else "light"
 
