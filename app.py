@@ -892,11 +892,33 @@ with active_tab[3]:
                     bm = st.number_input("Minutes", 1, step=5)
                     ra = st.text_input("Reason")
                     if st.form_submit_button("Apply Bonus") and tu != "None":
-                        selected_member = next(m for m in all_m if m["name"] == tu)
-                        ukey = f"{tu}_{selected_member['project']}"
-                        st.session_state.data["contributions"][ukey] = st.session_state.data["contributions"].get(ukey, 0) + bm
-                        st.session_state.data["logs"].append({"log_id": f"b_{datetime.now().strftime('%H%M%S')}", "user": tu, "date": str(date.today()), "minutes": bm, "task": f"BONUS: {ra}", "project": tp, "comments": []})
-                        save_data(); st.rerun()
+                        selected_member = next(
+                            (m for m in all_m if m.get("name") == tu),
+                            None
+                        )
+                        
+                        if selected_member:
+                            proj = selected_member.get("project") or tp
+                            ukey = f"{tu}_{proj}"
+                        
+                            st.session_state.data["contributions"][ukey] = (
+                                st.session_state.data["contributions"].get(ukey, 0) + bm
+                            )
+                        
+                            st.session_state.data["logs"].append({
+                                "log_id": f"b_{datetime.now().strftime('%H%M%S')}",
+                                "user": tu,
+                                "date": str(date.today()),
+                                "minutes": bm,
+                                "task": f"BONUS: {ra}",
+                                "project": proj,
+                                "comments": []
+                            })
+                        
+                            save_data()
+                            st.rerun()
+                        else:
+                            st.error("Student not found")
 
     ts1, ts2 = st.tabs(["🎭 Skit Team", "📄 Brochure Team"])
     for proj, t in [("SKIT", ts1), ("BROCHURE", ts2)]:
