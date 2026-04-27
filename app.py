@@ -5,9 +5,9 @@ import firebase_admin
 from firebase_admin import credentials, db
 import time
 from collections import defaultdict
-import pytz
+from zoneinfo import ZoneInfo
 
-SG_TZ = pytz.timezone("Asia/Singapore")
+SG_TZ = ZoneInfo("Asia/Singapore")
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
@@ -226,7 +226,8 @@ def log_system_event(action, user):
     st.session_state.data["system_logs"].append({
         "log_id": f"b_{datetime.now(SG_TZ).strftime('%H%M%S')}",
         "user": user,
-        "action": action
+        "action": action,
+        "time": datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S")
     })
 
 def render_event_calendar(events, selected_project):
@@ -1279,9 +1280,8 @@ if is_chair:
                                "🔴 LOGOUT" if "LOGOUT" in entry["action"] else \
                                "⚙️ SYSTEM"
                     
-                    st.markdown(f"""
-                    **{log_type}**
-                    `[{entry['time']}]`
-                    👤 {entry['user']}  
-                    ➡️ {entry['action']}
-                    """)
+                    st.session_state.data["system_logs"].append({
+                        "log_id": ...,
+                        "user": user,
+                        "action": action
+                    })
