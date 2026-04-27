@@ -1055,12 +1055,12 @@ if is_chair:
                 with st.container(border=True):
                     c1, c2 = st.columns([4, 1])
         
-                    c1.write(f"**{m['name']}** ({m['project']})")
+                    c1.write(f"**{m['name']}** ({m.get('project')})")
                     c1.caption(f"Role: {m['sub_role']}")
         
                     if c2.button("🗑️ Delete", key=f"del_member_{i}"):
                         log_system_event(
-                            f"Deleted member: {m['name']} ({m['project']})",
+                            f"Deleted member: {m['name']} ({m.get('project')})",
                             c_name
                         )
         
