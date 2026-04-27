@@ -616,6 +616,9 @@ st.sidebar.markdown("---")
 
 # --- LOGOUT ---
 if st.sidebar.button("🚪 Logout", use_container_width=True):
+    log_system_event(f"LOGOUT → {c_name} signed out", c_name)
+    save_data()
+
     st.session_state.authenticated = False
     st.rerun()
     
@@ -1232,5 +1235,13 @@ if is_chair:
                 st.info("No system activity yet.")
             else:
                 for entry in reversed(logs[-50:]):  # last 50 logs
-                    st.code(f"[{entry['time']}] {entry['user']} → {entry['action']}", language="bash")
+                    log_type = "🟢 LOGIN" if "LOGIN" in entry["action"] else \
+                               "🔴 LOGOUT" if "LOGOUT" in entry["action"] else \
+                               "⚙️ SYSTEM"
                     
+                    st.markdown(f"""
+                    **{log_type}**
+                    `[{entry['time']}]`
+                    👤 {entry['user']}  
+                    ➡️ {entry['action']}
+                    """)
