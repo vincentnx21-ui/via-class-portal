@@ -385,6 +385,13 @@ def render_event_calendar(events, selected_project):
                 
 if "data" not in st.session_state:
     st.session_state.data = load_data()
+    # --- DATA FIX / MIGRATION (PREVENT KEYERRORS) ---
+    for m in st.session_state.data.get("members", []):
+        m.setdefault("name", "Unknown")
+        m.setdefault("project", None)
+        m.setdefault("role_type", "PROJECT")
+        m.setdefault("is_rep", False)
+        m.setdefault("sub_role", "N/A")
 
 if not st.session_state.get("auto_generated"):
     generate_event_reports()
