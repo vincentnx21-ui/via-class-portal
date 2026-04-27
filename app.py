@@ -1013,7 +1013,10 @@ with active_tab[4]:
 
         summary.append({
             "NAME": name,
-            "PROJECTS": " | ".join(data["projects"]),
+            "PROJECTS": " | ".join(
+                str(p) if p else "CLASS"
+                for p in data["projects"]
+            ),
             "ROLE": " | ".join(data["roles"]),
             "VIA TIME": f"{total_minutes//60}h {total_minutes%60}m",
             "STATUS": "✅ Active" if total_minutes > 0 else "⏳ No Logs"
