@@ -1160,7 +1160,14 @@ if is_chair:
             with st.form("adj"):
                 c1, c2 = st.columns(2)
                 ap = c1.selectbox("Project", ["SKIT", "BROCHURE"])
-                an = c2.selectbox("Student", [mx['name'] for mx in st.session_state.data["members"] if mx['project'] == ap] or ["None"])
+                an = c2.selectbox(
+                    "Student",
+                    [
+                        mx.get('name', 'Unknown')
+                        for mx in st.session_state.data.get("members", [])
+                        if mx.get('project') == ap
+                    ] or ["None"]
+                )
                 am, ar = st.number_input("Minutes", step=5), st.text_input("Reason")
                 if st.form_submit_button("🔨 Apply Adjustment") and an != "None":
                     ukey = f"{an}_{ap}"
