@@ -32,60 +32,66 @@ else:
     muted = "#475569"
     sidebar = "#e2e8f0"
 
-st.markdown(f"""
+st.markdown("""
 <style>
-:root {{
+:root {
     --primary: #0ea5e9;
     --accent: #38bdf8;
-    --bg: {bg};
-    --card: {card};
-    --text: {text};
-    --muted: {muted};
-    --sidebar: {sidebar};
-}}
+}
 
-/* GLOBAL */
-.stApp {{
+/* DARK MODE */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+    }
+}
+
+/* LIGHT MODE */
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+    }
+}
+
+/* APPLY EVERYWHERE */
+.stApp {
     background: var(--bg);
     color: var(--text);
-}}
+}
+
+/* FORCE ALL TEXT TO FOLLOW THEME */
+html, body, p, span, div, label, h1, h2, h3, h4, h5 {
+    color: var(--text) !important;
+}
 
 /* CARDS */
-div[data-testid="stContainer"] {{
-    
-    padding: 16px;
+div[data-testid="stContainer"] {
+    background: var(--card);
     border-radius: 14px;
-    border: 1px solid rgba(0,0,0,0.05);
-}}
-
-/* BUTTONS */
-.stButton>button {{
-    background: var(--primary);
-    color: white;
-    border-radius: 10px;
-    font-weight: 600;
-    border: none;
-}}
-.stButton>button:hover {{
-    background: var(--accent);
-}}
+    padding: 16px;
+}
 
 /* SIDEBAR */
-section[data-testid="stSidebar"] {{
-    background: var(--sidebar);
-}}
+section[data-testid="stSidebar"] {
+    background: var(--card);
+}
 
-/* TEXT */
-h1, h2, h3 {{
-    color: var(--text);
-}}
+/* MUTED TEXT */
+small, .stCaption {
+    color: var(--muted) !important;
+}
 
-/* METRICS */
-[data-testid="stMetric"] {{
-    
-    border-radius: 12px;
-    padding: 10px;
-}}
+/* BUTTONS */
+.stButton>button {
+    background: var(--primary);
+    color: white;
+}
 </style>
 """, unsafe_allow_html=True)
 
