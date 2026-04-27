@@ -520,7 +520,7 @@ if not st.session_state.authenticated:
 # --- 5. PERMISSIONS ---
 c_name, c_role = st.session_state.u_name, st.session_state.u_role
 is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
-is_rep = "Representative" in c_role or any(m['name'] == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []))
+is_rep = "Representative" in c_role or any(m.get('name') == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []))
 
 # --- MODERN SIDEBAR UI ---
 st.sidebar.markdown("""
@@ -735,8 +735,8 @@ with active_tab[0]:
         if not mems: 
             st.info("👥 No members yet. Add from Admin panel.")
         for m in mems:
-            st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m['name']}**")
-            st.caption(f"Focus: {m['sub_role']}")
+            st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m.get('name')}**")
+            st.caption(f"Focus: {m.get('sub_role')}")
 
 # --- TAB 1: ATTENDANCE ---
 with active_tab[1]:
@@ -887,7 +887,7 @@ with active_tab[3]:
             with st.expander("➕ Add Project Bonus"):
                 with st.form("bonus_f"):
                     tp = st.selectbox("Project", ["SKIT", "BROCHURE"], key="b1")
-                    unames = [m['name'] for m in all_m if m.get('project') == tp]
+                    unames = [m.get('name', 'Unknown') for m in all_m if m.get('project') == tp]
                     tu = st.selectbox("Student", unames if unames else ["None"], key="b2")
                     bm = st.number_input("Minutes", 1, step=5)
                     ra = st.text_input("Reason")
@@ -910,7 +910,7 @@ with active_tab[3]:
                 st.info("No members in this project yet.")
             else:
                 for m in members_proj:
-                    mins = all_c.get(f"{m['name']}_{proj}", 0)
+                    mins = all_c.get(f"{m.get('name')}_{proj}", 0)
                     progress_val = max(0.0, min(1.0, mins / 300))
     
                     with st.container():
@@ -921,7 +921,7 @@ with active_tab[3]:
                             border-radius:10px;
                             margin-bottom:10px;
                         ">
-                            <b>{m['name']}</b><br>
+                            <b>{m.get('name')}</b><br>
                             <span style="color:#94a3b8;">
                             {mins//60}h {mins%60}m / 5h goal
                             </span>
@@ -1055,12 +1055,13 @@ if is_chair:
                 with st.container(border=True):
                     c1, c2 = st.columns([4, 1])
         
-                    c1.write(f"**{m['name']}** ({m.get('project')})")
-                    c1.caption(f"Role: {m['sub_role']}")
+                    proj_display = m.get("project") if m.get("project") else "CLASS"
+                    c1.write(f"**{m.get('name','Unknown')}** ({proj_display})")
+                    c1.caption(f"Role: {m.get('sub_role','N/A')}")
         
                     if c2.button("🗑️ Delete", key=f"del_member_{i}"):
                         log_system_event(
-                            f"Deleted member: {m['name']} ({m.get('project')})",
+                            f"Deleted member: {m.get('name')} ({m.get('project')})",
                             c_name
                         )
         
