@@ -725,20 +725,20 @@ with active_tab[0]:
     # Main Dashboard Content
     col1, col2 = st.columns([3, 1]) 
     
-    with col1:
-        # 🗓️ Calendar (unchanged)
-        st.subheader("🗓️ Event Calendar")
-        render_event_calendar(st.session_state.data.get("events", []), view_proj)
-        st.markdown("---")
-            
-        # 📅 RSVP Section
-        st.subheader("📅 Event RSVP")
-    
-        if not current_events:
-            st.info("📅 No upcoming events. Check back later or contact your rep.")
-        else:
-            for i, e in enumerate(current_events):  # ← LOOP STARTS HERE
-                with st.container():
+        with col1:
+            # 🗓️ Calendar
+            st.subheader("🗓️ Event Calendar")
+            render_event_calendar(st.session_state.data.get("events", []), view_proj)
+            st.markdown("---")
+                
+            # 📅 RSVP Section
+            st.subheader("📅 Event RSVP")
+        
+            if not current_events:
+                st.info("📅 No upcoming events. Check back later or contact your rep.")
+            else:
+                for i, e in enumerate(current_events):
+                    with st.container():
                         st.markdown(f"""
                         <div style="background: var(--card); padding:16px; border-radius:12px; border-left:5px solid #0ea5e9; margin-bottom:10px;">
                             <h4>{e['type']}</h4>
@@ -750,58 +750,58 @@ with active_tab[0]:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                # ✅ RSVP CODE MUST BE INDENTED INSIDE THE FOR LOOP:
-                eid = f"{e['project']}_{e['date']}_{e['start_time']}"
+                    # ✅ RSVP CODE - INSIDE THE FOR LOOP
+                    eid = f"{e['project']}_{e['date']}_{e['start_time']}"
                     
-                existing = next(
-                    (rv for rv in st.session_state.data.get("rsvp", [])
-                    if rv["event_id"] == eid and rv["name"] == c_name),
-                    None
-                )
-                    
-                status_default = existing["status"] if existing else "Attending"
-                reason_default = existing.get("reason", "") if existing else ""
-                   
-                col_r1, col_r2 = st.columns([1, 2])  # Renamed to avoid conflict with outer col1/col2
-                    
-                with col_r1:
-                    status = st.selectbox(
-                        "Status", ["Attending", "Late", "Not Attending"],
-                        index=["Attending", "Late", "Not Attending"].index(status_default),
-                        key=f"status_{eid}_{i}"
+                    existing = next(
+                        (rv for rv in st.session_state.data.get("rsvp", [])
+                        if rv["event_id"] == eid and rv["name"] == c_name),
+                        None
                     )
                     
-                with col_r2:
-                    reason = st.text_input("Reason (optional)", value=reason_default, key=f"reason_{eid}_{i}")
+                    status_default = existing["status"] if existing else "Attending"
+                    reason_default = existing.get("reason", "") if existing else ""
                     
-                if st.button("Submit RSVP", key=f"rsvp_btn_{eid}_{i}"):
-                    st.session_state.data["rsvp"] = [
-                        rv for rv in st.session_state.data.get("rsvp", [])
-                        if not (rv["event_id"] == eid and rv["name"] == c_name)
-                    ]
-                    st.session_state.data["rsvp"].append({
-                        "event_id": eid, "name": c_name, "status": status, "reason": reason
-                    })
-                    log_system_event(f"RSVP: {status} for {e['type']}", c_name)
-                    save_data()
-                    st.success("RSVP updated!")
-                    st.rerun()
+                    col_r1, col_r2 = st.columns([1, 2])
+                    
+                    with col_r1:
+                        status = st.selectbox(
+                            "Status", ["Attending", "Late", "Not Attending"],
+                            index=["Attending", "Late", "Not Attending"].index(status_default),
+                            key=f"status_{eid}_{i}"
+                        )
+                    
+                    with col_r2:
+                        reason = st.text_input("Reason (optional)", value=reason_default, key=f"reason_{eid}_{i}")
+                    
+                    if st.button("Submit RSVP", key=f"rsvp_btn_{eid}_{i}"):
+                        st.session_state.data["rsvp"] = [
+                            rv for rv in st.session_state.data.get("rsvp", [])
+                            if not (rv["event_id"] == eid and rv["name"] == c_name)
+                        ]
+                        st.session_state.data["rsvp"].append({
+                            "event_id": eid, "name": c_name, "status": status, "reason": reason
+                        })
+                        log_system_event(f"RSVP: {status} for {e['type']}", c_name)
+                        save_data()
+                        st.success("RSVP updated!")
+                        st.rerun()
             
-            # ✅ HISTORY SECTION - OUTSIDE THE FOR LOOP, SAME LEVEL AS RSVP HEADER
-    st.divider()
-    st.subheader("📜 Event History")
+            # ✅ HISTORY SECTION - Still inside with col1:, but OUTSIDE the for-loop
+            st.divider()
+            st.subheader("📜 Event History")
             
-     if not history_events:
-        st.caption("No past or cancelled events.")
-    else:
-            for e in reversed(history_events):
-                event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
-                with st.container(border=True):
-                    if e.get("status") == "Cancelled":
-                        st.error(f"🚫 **CANCELLED: {e['type']}**")
-                    else:
-                        st.success(f"✅ **COMPLETED: {e['type']}**")
-                    st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
+            if not history_events:
+                st.caption("No past or cancelled events.")
+            else:
+                for e in reversed(history_events):
+                    event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
+                    with st.container(border=True):
+                        if e.get("status") == "Cancelled":
+                            st.error(f"🚫 **CANCELLED: {e['type']}**")
+                        else:
+                            st.success(f"✅ **COMPLETED: {e['type']}**")
+                        st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
                     
     with col2:
         st.subheader("👥 Team Roster")
