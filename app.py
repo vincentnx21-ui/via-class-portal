@@ -127,7 +127,10 @@ def load_data():
                     try:
                         # DATE
                         if isinstance(event.get("date"), str):
-                            event["date"] = datetime.fromisoformat(event["date"]).date()
+                            try:
+                                event["date"] = datetime.fromisoformat(event["date"]).date()
+                            except (ValueError, TypeError):
+                                event["date"] = date.today()  # Safe fallback
 
                         # TIME
                         if isinstance(event.get("start_time"), str):
@@ -741,7 +744,7 @@ with active_tab[0]:
                             <h4>{e['type']}</h4>
                             <p style="color: var(--muted);">
                             📍 {e.get('venue','N/A')} <br>
-                            ⏰ {e['start_time'].strftime("%I:%M %p")} <br>
+                            ⏰ {e['start_time'].strftime("%I:%M %p") if hasattr(e['start_time'], 'strftime') else e.get('start_time', 'N/A')} <br>
                             📅 {e['date']}
                             </p>
                         </div>
