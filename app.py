@@ -726,7 +726,7 @@ with active_tab[0]:
     col1, col2 = st.columns([3, 1]) 
     
     with col1:
-         # 🗓️ Calendar (unchanged)
+        # 🗓️ Calendar (unchanged)
         st.subheader("🗓️ Event Calendar")
         render_event_calendar(st.session_state.data.get("events", []), view_proj)
         st.markdown("---")
