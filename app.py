@@ -754,7 +754,57 @@ with active_tab[0]:
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
-                    st.caption("RSVP feature coming soon")
+                    # --- RSVP SECTION ---
+eid = f"{e['project']}_{e['date']}_{e['start_time']}"
+
+# Get existing RSVP
+existing = next(
+    (rv for rv in st.session_state.data.get("rsvp", [])
+     if rv["event_id"] == eid and rv["name"] == c_name),
+    None
+)
+
+status_default = existing["status"] if existing else "Attending"
+reason_default = existing.get("reason", "") if existing else ""
+
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    status = st.selectbox(
+        "Status",
+        ["Attending", "Late", "Not Attending"],
+        index=["Attending", "Late", "Not Attending"].index(status_default),
+        key=f"status_{eid}_{i}"
+    )
+
+with col2:
+    reason = st.text_input(
+        "Reason (optional)",
+        value=reason_default,
+        key=f"reason_{eid}_{i}"
+    )
+
+if st.button("Submit RSVP", key=f"rsvp_btn_{eid}_{i}"):
+
+    # Remove old RSVP if exists
+    st.session_state.data["rsvp"] = [
+        rv for rv in st.session_state.data.get("rsvp", [])
+        if not (rv["event_id"] == eid and rv["name"] == c_name)
+    ]
+
+    # Add new RSVP
+    st.session_state.data["rsvp"].append({
+        "event_id": eid,
+        "name": c_name,
+        "status": status,
+        "reason": reason
+    })
+
+    log_system_event(f"RSVP: {status} for {e['type']}", c_name)
+
+    save_data()
+    st.success("RSVP updated!")
+    st.rerun()
         
         # --- HISTORY ---
         st.divider()
