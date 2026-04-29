@@ -15,17 +15,18 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 if "theme" not in st.session_state:
     st.session_state.theme = "dark"
 
-# ✅ NEW DYNAMIC TOGGLE WITH ANIMATION
 theme_toggle = st.toggle(
     "🌙 Dark Mode" if st.session_state.theme == "dark" else "☀️ Light Mode",
     value=(st.session_state.theme == "dark")
 )
 
+# Detect change and show toast BEFORE updating
 if theme_toggle != (st.session_state.theme == "dark"):
-    st.session_state.theme = "dark" if theme_toggle else "light"
-    st.rerun()  # Instant visual feedback
+    new_theme = "dark" if theme_toggle else "light"
+    st.toast(f"Switched to {'🌙 Dark' if theme_toggle else '☀️ Light'} Mode", icon="✨")
+    st.session_state.theme = new_theme
+    # No st.rerun() - CSS variables update automatically on next render
 
-# --- CUSTOM CSS ---
 # --- CUSTOM CSS ---
 theme = st.session_state.theme
 
