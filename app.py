@@ -15,9 +15,15 @@ st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 if "theme" not in st.session_state:
     st.session_state.theme = "dark"
 
-theme_toggle = st.toggle("🌗 Dark Mode", value=True)
+# ✅ NEW DYNAMIC TOGGLE WITH ANIMATION
+theme_toggle = st.toggle(
+    "🌙 Dark Mode" if st.session_state.theme == "dark" else "☀️ Light Mode",
+    value=(st.session_state.theme == "dark")
+)
 
-st.session_state.theme = "dark" if theme_toggle else "light"
+if theme_toggle != (st.session_state.theme == "dark"):
+    st.session_state.theme = "dark" if theme_toggle else "light"
+    st.rerun()  # Instant visual feedback
 
 # --- CUSTOM CSS ---
 # --- CUSTOM CSS ---
@@ -224,6 +230,30 @@ a:hover {{
     color: var(--accent) !important;
     border-bottom: 2px solid var(--accent) !important;
 }}
+
+/* === 🌓 THEME TOGGLE ANIMATION (ADD THIS) === */
+div[data-testid="stToggle"] {{
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}}
+div[data-testid="stToggle"]:hover {{
+    transform: translateY(-2px) !important;
+}}
+.stToggle label {{
+    transition: all 0.25s ease !important;
+    font-weight: 600 !important;
+}}
+div[data-baseweb="toggle"] > div {{
+    background: var(--card) !important;
+    border: 2px solid var(--border) !important;
+}}
+div[data-baseweb="toggle"] input {{
+    accent-color: var(--accent) !important;
+}}
+.stApp {{
+    transition: background-color 0.4s ease, color 0.4s ease !important;
+}}
+/* === END THEME TOGGLE CSS === */
+
 </style>
 """, unsafe_allow_html=True)
     
