@@ -439,7 +439,7 @@ def log_system_event(action, user):
     })
 
 def render_event_calendar(events, selected_project):
-    """Calendar with proper grid layout"""
+    """Calendar with proper grid alignment and no collapsing columns."""
     import calendar
     from datetime import datetime, date, timedelta
 
@@ -452,7 +452,7 @@ def render_event_calendar(events, selected_project):
     month_events = {}
     reminders = []
 
-    # Filter events
+    # Filter events for the current month and project
     for e in events:
         try:
             evt_date = e.get("date")
@@ -467,6 +467,7 @@ def render_event_calendar(events, selected_project):
                     month_events[day] = []
                 month_events[day].append(e)
 
+                # Add reminders if needed
                 if evt_date == tomorrow:
                     reminders.append(f"⚠️ **Tomorrow**: {e['type']} ({e.get('start_time', 'N/A')})")
                 elif evt_date == day_after:
@@ -480,69 +481,46 @@ def render_event_calendar(events, selected_project):
     if 'cal_day_selected' not in st.session_state:
         st.session_state.cal_day_selected = None
 
-    # Display reminders
+    # Display Reminders
     if reminders:
         for r in reminders:
             st.warning(r, icon="🔔")
 
-    # Calendar header with month name
-    col_space, col_title, col_space2 = st.columns([1, 2, 1])
-    with col_title:
-        st.markdown(f"<h3 style='text-align: center; color: {accent}; margin: 20px 0;'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
+    # Calendar Title
+    st.markdown(f"<h3 style='text-align: center; color: {accent}; margin: 20px 0;'>📅 {month_name} {current_year}</h3>", unsafe_allow_html=True)
 
-    # Day of week headers
-    days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    day_cols = st.columns(7)
-    for i, day_name in enumerate(days_of_week):
-        with day_cols[i]:
-            st.markdown(f"<div style='text-align: center; font-weight: bold; color: {muted}; padding: 10px; border-bottom: 2px solid {border};'>{day_name[:3]}</div>", unsafe_allow_html=True)
+    # Day Headers (Mon-Sun)
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    header_cols = st.columns(7)
+    for i, name in enumerate(day_names):
+        with header_cols[i]:
+            st.markdown(f"<div style='text-align: center; font-weight: bold; color: {muted}; padding-bottom: 10px; border-bottom: 2px solid {border};'>{name}</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-    # Calendar grid
+    # --- CALENDAR GRID ---
     for week in cal:
         week_cols = st.columns(7)
         for i, day in enumerate(week):
             with week_cols[i]:
-                if day == 0:
-                    # Empty cell for days not in this month
-                    st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
-                else:
+                # ✅ FIX: Force height on EVERY cell to prevent Streamlit from collapsing empty columns
+                # This ensures the grid rows stay perfectly aligned vertically
+                st.markdown("<div style='height: 55px;'>&nbsp;</div>", unsafe_allow_html=True)
+                
+                if day != 0:
                     has_event = day in month_events
-                    is_today = day == today.day
-                    evt_date_obj = date(current_year, current_month, day)
-                    is_past = evt_date_obj < today
-
-                    # Determine button style
+                    
                     if has_event:
-                        if is_past:
-                            btn_color = "#475569"
-                            bg_color = "#1e293b" if theme == "dark" else "#f1f5f9"
-                        elif is_today:
-                            btn_color = "#38bdf8"
-                            bg_color = "#334155" if theme == "dark" else "#e0f2fe"
-                        else:
-                            btn_color = "#38bdf8"
-                            bg_color = "#0f172a" if theme == "dark" else "#ffffff"
-                        
-                        # Create clickable button for days with events
-                        if st.button(
-                            str(day),
-                            key=f"cal_btn_{day}",
-                            use_container_width=True,
-                            type="secondary"
-                        ):
+                        # Button for days with events (matches your image style)
+                        if st.button(str(day), key=f"cal_btn_{day}_{current_month}", type="secondary"):
                             st.session_state.cal_day_selected = day
                     else:
-                        # Just display day number for days without events
-                        st.markdown(
-                            f"<div style='text-align: center; padding: 10px; color: {muted}; height: 40px;'>{day}</div>",
-                            unsafe_allow_html=True
-                        )
+                        # Plain text for days without events
+                        st.markdown(f"<p style='text-align: center; color: {text}; font-size: 14px; margin-top: 10px;'>{day}</p>", unsafe_allow_html=True)
 
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-    # Display selected day events
+    # --- SELECTED DAY DETAILS ---
     if st.session_state.get('cal_day_selected') and st.session_state.cal_day_selected in month_events:
         st.markdown(f"<h4 style='color: {text}; margin: 20px 0 10px 0;'>📅 Events on {st.session_state.cal_day_selected} {month_name}</h4>", unsafe_allow_html=True)
         
@@ -558,8 +536,8 @@ def render_event_calendar(events, selected_project):
                     border: 1px solid {border};
                 ">
                     <h5 style="color: {text}; margin: 0 0 10px 0;">{evt['type']}</h5>
-                    <p style="color: {muted}; margin: 5px 0;">
-                        📍 {evt.get('venue', 'N/A')}<br>
+                    <p style="color: {muted}; margin: 0;">
+                        📍 {evt.get('venue', 'N/A')} <br>
                         ⏰ {evt['start_time'].strftime('%I:%M %p') if hasattr(evt['start_time'], 'strftime') else evt.get('start_time', 'N/A')}
                     </p>
                 </div>
@@ -568,12 +546,6 @@ def render_event_calendar(events, selected_project):
         if st.button("✕ Close", key="close_cal", type="secondary"):
             st.session_state.cal_day_selected = None
             st.rerun()
-    elif month_events:
-        # Show summary of events this month
-        st.markdown(f"<h4 style='color: {text}; margin: 20px 0 10px 0;'>📋 This Month's Events</h4>", unsafe_allow_html=True)
-        for day in sorted(month_events.keys()):
-            for evt in month_events[day]:
-                st.markdown(f"**{day} {month_name}**: {evt['type']} - {evt.get('venue', 'N/A')}")
 
 # ============================================================================
 # --- APP INITIALIZATION ---
