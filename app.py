@@ -20,83 +20,209 @@ theme_toggle = st.toggle("🌗 Dark Mode", value=True)
 st.session_state.theme = "dark" if theme_toggle else "light"
 
 # --- CUSTOM CSS ---
+# --- CUSTOM CSS ---
 theme = st.session_state.theme
 
+# Define theme colors
 if theme == "dark":
     bg = "#0f172a"
     card = "#1e293b"
     text = "#e2e8f0"
     muted = "#94a3b8"
     sidebar = "#020617"
+    border = "#334155"
+    accent = "#38bdf8"
+    success = "#22c55e"
+    warning = "#f59e0b"
+    error = "#ef4444"
 else:
     bg = "#f8fafc"
     card = "#ffffff"
     text = "#0f172a"
-    muted = "#475569"
-    sidebar = "#e2e8f0"
+    muted = "#64748b"
+    sidebar = "#f1f5f9"
+    border = "#cbd5e1"
+    accent = "#0284c7"
+    success = "#16a34a"
+    warning = "#d97706"
+    error = "#dc2626"
 
-    st.markdown(f"""
+st.markdown(f"""
 <style>
 :root {{
     --primary: #0ea5e9;
-    --accent: #38bdf8;
-
+    --accent: {accent};
     --bg: {bg};
     --card: {card};
     --text: {text};
     --muted: {muted};
+    --border: {border};
+    --success: {success};
+    --warning: {warning};
+    --error: {error};
 }}
 
-html, body, [class*="css"] {{
+/* Global resets */
+html, body, [class*="css"], .stApp {{
     background-color: var(--bg) !important;
     color: var(--text) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }}
 
-.stApp {{
-    background: var(--bg) !important;
+/* Text elements */
+p, span, div, label, h1, h2, h3, h4, h5, h6, li {{
     color: var(--text) !important;
 }}
 
-p, span, div, label, h1, h2, h3, h4, h5, h6 {{
-    color: var(--text) !important;
-}}
-
-input, textarea {{
-    color: var(--text) !important;
-    background-color: var(--card) !important;
-}}
-
-div[data-baseweb="select"] > div {{
-    background-color: var(--card) !important;
-    color: var(--text) !important;
-}}
-
-div[data-testid="stContainer"] {{
-    background: var(--card) !important;
-    border-radius: 14px;
-    padding: 16px;
-}}
-
-section[data-testid="stSidebar"] {{
-    background: {sidebar} !important;
-}}
-
-small, .stCaption {{
+.stCaption, small, .stMarkdown p {{
     color: var(--muted) !important;
 }}
 
-.stButton > button {{
-    background: var(--primary) !important;
-    color: white !important;
-    border-radius: 10px;
-}}
-
-[data-testid="stDataFrame"] {{
+/* Cards & containers */
+div[data-testid="stContainer"], .stCard, .cal-container {{
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
     color: var(--text) !important;
 }}
 
+/* Sidebar */
+section[data-testid="stSidebar"] {{
+    background: var(--sidebar) !important;
+    border-right: 1px solid var(--border) !important;
+}}
+
+/* Inputs */
+input, textarea, select {{
+    color: var(--text) !important;
+    background-color: var(--card) !important;
+    border: 1px solid var(--border) !important;
+}}
+
+input::placeholder, textarea::placeholder {{
+    color: var(--muted) !important;
+}}
+
+/* Select dropdowns */
+div[data-baseweb="select"] > div, 
+div[data-baseweb="popover"] {{
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}}
+
+/* Buttons */
+.stButton > button {{
+    background: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    transition: opacity 0.2s !important;
+}}
+.stButton > button:hover {{
+    opacity: 0.9 !important;
+}}
+.stButton > button[kind="secondary"] {{
+    background: var(--card) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}}
+
+/* Dataframes & tables */
+[data-testid="stDataFrame"], table {{
+    color: var(--text) !important;
+    background: var(--card) !important;
+}}
+[data-testid="stDataFrame"] thead {{
+    background: var(--card) !important;
+    border-bottom: 1px solid var(--border) !important;
+}}
+
+/* Alerts & messages */
+.stAlert, .stInfo, .stSuccess, .stWarning, .stError {{
+    background: var(--card) !important;
+    border-left: 4px solid var(--accent) !important;
+    color: var(--text) !important;
+}}
+.stWarning {{ border-left-color: var(--warning) !important; }}
+.stError {{ border-left-color: var(--error) !important; }}
+.stSuccess {{ border-left-color: var(--success) !important; }}
+
+/* Progress bars */
+.stProgress > div > div {{
+    background: var(--accent) !important;
+}}
+.stProgress > div {{
+    background: var(--border) !important;
+}}
+
+/* Expander */
+.streamlit-expanderHeader {{
+    background: var(--card) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}}
+.streamlit-expanderContent {{
+    background: var(--card) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-top: none !important;
+}}
+
+/* Divider */
+hr, .stDivider {{
+    border-color: var(--border) !important;
+}}
+
+/* Calendar specific */
 .cal-container {{
     background: var(--card) !important;
+    border: 2px solid var(--border) !important;
+}}
+.cal-date-text {{
+    color: var(--muted) !important;
+}}
+.cal-btn-wrapper button {{
+    border: 2px solid var(--border) !important;
+    color: var(--text) !important;
+}}
+
+/* Lists */
+ul, ol {{
+    color: var(--text) !important;
+    padding-left: 20px !important;
+}}
+li {{
+    color: var(--text) !important;
+    margin: 4px 0 !important;
+}}
+
+/* Links */
+a {{
+    color: var(--accent) !important;
+}}
+a:hover {{
+    opacity: 0.8 !important;
+}}
+
+/* Metrics */
+[data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{
+    color: var(--text) !important;
+}}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {{
+    background: var(--card) !important;
+    border-bottom: 1px solid var(--border) !important;
+}}
+.stTabs [data-baseweb="tab"] {{
+    color: var(--muted) !important;
+}}
+.stTabs [aria-selected="true"] {{
+    color: var(--accent) !important;
+    border-bottom: 2px solid var(--accent) !important;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -351,63 +477,48 @@ def render_event_calendar(events, selected_project):
                     evt_date_obj = datetime(current_year, current_month, day).date()
                     is_past = evt_date_obj < today
 
+                    # Inside render_event_calendar(), replace the button color section:
                     if has_event:
-                        # Button colors - NO EMOJIS
-                        if is_past:
-                            bg_color = "#1e293b"
-                            border_color = "#64748b"
-                            text_color = "#64748b"
-                        elif is_today:
-                            bg_color = "#334155"
-                            border_color = "#ffffff"
-                            text_color = "#ffffff"
-                        else:
-                            bg_color = "#0f172a"
-                            border_color = "#38bdf8"
-                            text_color = "#38bdf8"
-
-                        # Unique key for this button
+                        # Theme-aware button colors
+                        if theme == "dark":
+                            if is_past:
+                                bg_color, border_color, text_color = "#1e293b", "#475569", "#64748b"
+                            elif is_today:
+                                bg_color, border_color, text_color = "#334155", "#38bdf8", "#ffffff"
+                            else:
+                                bg_color, border_color, text_color = "#0f172a", "#38bdf8", "#38bdf8"
+                        else:  # light mode
+                            if is_past:
+                                bg_color, border_color, text_color = "#f1f5f9", "#cbd5e1", "#94a3b8"
+                            elif is_today:
+                                bg_color, border_color, text_color = "#e0f2fe", "#0284c7", "#0f172a"
+                            else:
+                                bg_color, border_color, text_color = "#ffffff", "#0284c7", "#0284c7"
+                    
                         btn_key = f"cal_btn_{day}_{current_month}_{current_year}"
+                        st.markdown(f'<div class="cal-btn-wrapper">', unsafe_allow_html=True)
                         
-                        # Wrapper div with specific class
-                        st.markdown(f'<div class="cal-btn-wrapper" id="wrapper_{btn_key}">', unsafe_allow_html=True)
-                        
-                        if st.button(
-                            str(day),  # NO EMOJI
-                            key=btn_key,
-                            use_container_width=True,
-                            type="secondary"
-                        ):
+                        if st.button(str(day), key=btn_key, use_container_width=True, type="secondary"):
                             st.session_state.cal_day_selected = day
-
-                        # Apply specific colors to THIS button only
+                    
+                        # Apply colors using CSS variables fallback    
                         st.markdown(f"""
-                        <style>
-                        #{btn_key} {{
-                            background: {bg_color} !important;
-                            border-color: {border_color} !important;
-                            color: {text_color} !important;
-                        }}
-                        #{btn_key}:hover {{
-                            background: {bg_color} !important;
-                            border-color: {text_color} !important;
-                            opacity: 0.8;
-                        }}
-                        </style>
+                        <div style="
+                            background: var(--card);
+                            padding:16px;
+                            border-radius:12px;
+                            border-left:5px solid var(--accent);
+                            margin-bottom:10px;
+                            border: 1px solid var(--border);
+                        ">
+                            <h4 style="color: var(--text); margin:0 0 8px 0;">{e['type']}</h4>
+                            <p style="color: var(--muted); margin:0;">
+                            📍 {e.get('venue','N/A')} <br>
+                            ⏰ {e['start_time'].strftime("%I:%M %p") if hasattr(e['start_time'], 'strftime') else e.get('start_time', 'N/A')} <br>
+                            📅 {e['date']}
+                            </p>
+                        </div>
                         """, unsafe_allow_html=True)
-                        
-                        st.markdown('</div>', unsafe_allow_html=True)
-
-                    else:
-                        # No event - just plain text
-                        color = "#ffffff" if is_today else "#64748b"
-                        weight = "700" if is_today else "500"
-                        st.markdown(
-                            f"<div class='cal-date-text' style='color:{color}; font-weight:{weight};'>{day}</div>",
-                            unsafe_allow_html=True
-                        )
-
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # --- DETAILS PANEL ---
     if st.session_state.get('cal_day_selected') and st.session_state.cal_day_selected in month_events:
@@ -797,10 +908,32 @@ with active_tab[0]:
             for e in reversed(history_events):
                 event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
                 with st.container(border=True):
+                    with st.container(border=True):
                     if e.get("status") == "Cancelled":
-                        st.error(f"🚫 **CANCELLED: {e['type']}**")
+                        st.markdown(f"""
+                        <div style="
+                            background: var(--error);
+                            color: white;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            display: inline-block;
+                            font-weight: 600;
+                            margin-bottom: 8px;
+                        ">🚫 CANCELLED: {e['type']}</div>
+                        """, unsafe_allow_html=True)
                     else:
-                        st.success(f"✅ **COMPLETED: {e['type']}**")
+                        st.markdown(f"""
+                        <div style="
+                            background: var(--success);
+                            color: white;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            display: inline-block;
+                            font-weight: 600;
+                            margin-bottom: 8px;
+                        ">✅ COMPLETED: {e['type']}</div>
+                        """, unsafe_allow_html=True)
+                    
                     st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
                     
     with col2:
@@ -1015,8 +1148,9 @@ with active_tab[3]:
                             padding:14px;
                             border-radius:10px;
                             margin-bottom:10px;
+                            border: 1px solid var(--border);
                         ">
-                            <b>{m.get('name')}</b><br>
+                            <b style="color: var(--text);">{m.get('name')}</b><br>
                             <span style="color: var(--muted);">
                             {mins//60}h {mins%60}m / 5h goal
                             </span>
