@@ -909,32 +909,32 @@ with active_tab[0]:
                 event_date = datetime.fromisoformat(e["date"]).date() if isinstance(e["date"], str) else e["date"]
                 with st.container(border=True):
                     with st.container(border=True):
-                    if e.get("status") == "Cancelled":
-                        st.markdown(f"""
-                        <div style="
-                            background: var(--error);
-                            color: white;
-                            padding: 8px 12px;
-                            border-radius: 6px;
-                            display: inline-block;
-                            font-weight: 600;
-                            margin-bottom: 8px;
-                        ">🚫 CANCELLED: {e['type']}</div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div style="
-                            background: var(--success);
-                            color: white;
-                            padding: 8px 12px;
-                            border-radius: 6px;
-                            display: inline-block;
-                            font-weight: 600;
-                            margin-bottom: 8px;
-                        ">✅ COMPLETED: {e['type']}</div>
-                        """, unsafe_allow_html=True)
-                    
-                    st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
+                        if e.get("status") == "Cancelled":
+                            st.markdown(f"""
+                            <div style="
+                                background: var(--error);
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 6px;
+                                display: inline-block;
+                                font-weight: 600;
+                                margin-bottom: 8px;
+                            ">🚫 CANCELLED: {e['type']}</div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"""
+                            <div style="
+                                background: var(--success);
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 6px;
+                                display: inline-block;
+                                font-weight: 600;
+                                margin-bottom: 8px;
+                            ">✅ COMPLETED: {e['type']}</div>
+                            """, unsafe_allow_html=True)
+                        
+                        st.caption(f"📅 {e['date']} | 📍 {e.get('venue', 'N/A')}")
                     
     with col2:
         st.subheader("👥 Team Roster")
