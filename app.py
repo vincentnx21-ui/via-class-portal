@@ -6,8 +6,20 @@ from firebase_admin import credentials, db
 import time
 from collections import defaultdict
 from zoneinfo import ZoneInfo
+import hashlib  # 🔐 For password hashing
 
 SG_TZ = ZoneInfo("Asia/Singapore")
+
+# ============================================================================
+# 🔐 PASSWORD UTILITIES
+# ============================================================================
+def hash_password(password: str) -> str:
+    """Simple SHA-256 hashing for password storage."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against stored hash."""
+    return hash_password(password) == hashed
 
 # ============================================================================
 # 🍞 THEME-ADAPTIVE TOAST FUNCTION
@@ -398,7 +410,8 @@ def load_data():
             "contributions": {},
             "events": [],
             "rsvp": [],
-            "attendance": {}
+            "attendance": {},
+            "signup_enabled": False  # 🔐 Default: sign-ups disabled
         }
 
     except Exception as e:
@@ -410,7 +423,8 @@ def load_data():
             "contributions": {},
             "events": [],
             "rsvp": [],
-            "attendance": {}
+            "attendance": {},
+            "signup_enabled": False
         }
 
 def generate_event_reports():
@@ -612,10 +626,10 @@ for log in st.session_state.data.get("logs", []):
         if "comment_id" not in c:
             c["comment_id"] = str(datetime.now(SG_TZ).timestamp())
                 
-required_keys = ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance"]
+required_keys = ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance", "signup_enabled"]
 for key in required_keys:
     if key not in st.session_state.data:
-        st.session_state.data[key] = {} if key in ["contributions", "attendance"] else []
+        st.session_state.data[key] = {} if key in ["contributions", "attendance"] else [] if key != "signup_enabled" else False
 
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "u_name" not in st.session_state: st.session_state.u_name = ""
@@ -684,34 +698,101 @@ if not st.session_state.authenticated:
     st.markdown("<div class='title'>🚀 VIA Portal 2026</div>", unsafe_allow_html=True)
     st.markdown("<div class='subtitle'>Sign in to continue</div>", unsafe_allow_html=True)
 
-    with st.form("login"):
-        name_in = st.text_input("Name").strip().title()
-        role_in = st.selectbox("Role", list(USER_PASSWORDS.keys()))
-        pw_in = st.text_input("Password", type="password")
+    # 🔐 Sign-up toggle for Chairman
+    signup_enabled = st.session_state.data.get("signup_enabled", False)
+    
+    # Tab between Sign In and Sign Up
+    auth_mode = st.radio("Choose Action", ["🔐 Sign In", "📝 Sign Up"] if signup_enabled else ["🔐 Sign In"], horizontal=True, label_visibility="collapsed")
+    
+    if auth_mode == "🔐 Sign In":
+        with st.form("login"):
+            name_in = st.text_input("Name").strip().title()
+            role_in = st.selectbox("Role", list(USER_PASSWORDS.keys()))
+            pw_in = st.text_input("Password", type="password")
 
-        login_btn = st.form_submit_button("Sign In")
+            login_btn = st.form_submit_button("Sign In")
 
-        if login_btn:
-            if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
-                st.session_state.authenticated = True
-                st.session_state.u_name = name_in
-                st.session_state.u_role = "Chairman"
-            elif pw_in == USER_PASSWORDS.get(role_in):
-                st.session_state.authenticated = True
-                st.session_state.u_name = name_in
-                st.session_state.u_role = role_in
-            else:
-                st.error("Access Denied")
-                st.stop()
-        
-            log_system_event(f"LOGIN → {name_in} signed in as {st.session_state.u_role}", name_in)
-            save_data()
-        
-            with st.spinner("Entering portal..."):
-                time.sleep(1)
-        
-            st.success("Welcome!")
-            st.rerun()
+            if login_btn:
+                # 🔐 Check Chairman secret first
+                if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
+                    st.session_state.authenticated = True
+                    st.session_state.u_name = name_in
+                    st.session_state.u_role = "Chairman"
+                # 🔐 Check default role passwords
+                elif pw_in == USER_PASSWORDS.get(role_in):
+                    st.session_state.authenticated = True
+                    st.session_state.u_name = name_in
+                    st.session_state.u_role = role_in
+                # 🔐 Check user-created accounts
+                else:
+                    user_account = next((acc for acc in st.session_state.data.get("accounts", []) 
+                                        if acc["name"].lower() == name_in.lower() and acc["role"] == role_in), None)
+                    if user_account and verify_password(pw_in, user_account["password_hash"]):
+                        st.session_state.authenticated = True
+                        st.session_state.u_name = name_in
+                        st.session_state.u_role = role_in
+                    else:
+                        st.error("❌ Invalid credentials")
+                        st.stop()
+            
+                log_system_event(f"LOGIN → {name_in} signed in as {st.session_state.u_role}", name_in)
+                save_data()
+            
+                with st.spinner("Entering portal..."):
+                    time.sleep(1)
+            
+                st.success("Welcome!")
+                st.rerun()
+
+    elif auth_mode == "📝 Sign Up" and signup_enabled:
+        st.info("🔐 Create your secure account. Your password will be encrypted.")
+        with st.form("signup"):
+            su_name = st.text_input("Full Name").strip().title()
+            su_role = st.selectbox("Select Your Role", list(USER_PASSWORDS.keys()), key="signup_role")
+            su_pw = st.text_input("Create Password", type="password", key="signup_pw")
+            su_pw_confirm = st.text_input("Confirm Password", type="password", key="signup_pw_confirm")
+            
+            signup_btn = st.form_submit_button("Create Account")
+            
+            if signup_btn:
+                if not su_name or not su_pw:
+                    st.error("❌ Name and password are required")
+                elif su_pw != su_pw_confirm:
+                    st.error("❌ Passwords do not match")
+                elif len(su_pw) < 6:
+                    st.error("❌ Password must be at least 6 characters")
+                else:
+                    # Check if account already exists
+                    existing = next((acc for acc in st.session_state.data.get("accounts", []) 
+                                   if acc["name"].lower() == su_name.lower() and acc["role"] == su_role), None)
+                    if existing:
+                        st.error("❌ Account already exists for this name and role")
+                    else:
+                        # Create new account with hashed password
+                        new_account = {
+                            "name": su_name,
+                            "role": su_role,
+                            "password_hash": hash_password(su_pw),
+                            "created_at": datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                            "created_by": "SELF"
+                        }
+                        st.session_state.data.setdefault("accounts", []).append(new_account)
+                        
+                        # Auto-add to members list if not exists
+                        if not any(m.get("name") == su_name for m in st.session_state.data.get("members", [])):
+                            st.session_state.data["members"].append({
+                                "name": su_name,
+                                "project": None if su_role in ["Teacher", "VIA Committee"] else "CLASS",
+                                "role_type": "CLASS" if su_role in ["Teacher", "VIA Committee"] else "PROJECT",
+                                "is_rep": False,
+                                "sub_role": "N/A"
+                            })
+                        
+                        log_system_event(f"SIGNUP → {su_name} created account as {su_role}", su_name)
+                        save_data()
+                        st.success(f"✅ Account created! Please sign in with your credentials.")
+                        time.sleep(2)
+                        st.rerun()
 
     st.stop()
 
@@ -1133,7 +1214,10 @@ with active_tab[4]:
 if is_chair:
     with active_tab[5]:
         st.title("⚙️ Chairman Master Control")
-        at1, at2, at3, at4, at5, at6 = st.tabs(["👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections", "⚠️ Reset", "🖥️ Terminal"])
+        at1, at2, at3, at4, at5, at6, at7 = st.tabs([
+            "👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections", 
+            "⚠️ Reset", "🖥️ Terminal", "👤 User Manager"  # ✅ NEW TAB
+        ])
         
         with at1:
             st.subheader("➕ Add Member")
@@ -1219,10 +1303,18 @@ if is_chair:
                                 st.rerun()
 
         with at3:
+            st.subheader("🔐 Account Credentials (Legacy)")
+            st.info("These are default role passwords. User accounts are managed in '👤 User Manager' tab.")
+            for role, pw in USER_PASSWORDS.items():
+                st.code(f"{role}: {pw}", language="text")
+            
+            st.divider()
+            st.subheader("🗑️ Wipe Legacy Accounts")
             for i, a in enumerate(st.session_state.data.get("accounts", [])):
                 with st.container(border=True):
                     c1, c2 = st.columns([4, 1])
                     c1.write(f"**{a['name']}** ({a['role']})")
+                    c1.caption(f"Created: {a.get('created_at', 'N/A')}")
                     if c2.button("Wipe", key=f"w_{i}"):
                         st.session_state.data["accounts"].pop(i)
                         save_data()
@@ -1272,3 +1364,135 @@ if is_chair:
                     st.caption(f"{entry.get('time', 'N/A')} | {log_type} | {entry.get('user', 'Unknown')}")
                     st.text(entry.get('action', ''))
                     st.divider()
+
+        # ============================================================================
+        # --- NEW TAB: 👤 USER MANAGER ---
+        # ============================================================================
+        with at7:
+            st.title("👤 User Account Manager")
+            st.info("Manage user sign-ups and accounts. Toggle sign-ups ON/OFF below.")
+            
+            # 🔐 SIGN-UP TOGGLE (CHAIRMAN CONTROL)
+            signup_enabled = st.session_state.data.get("signup_enabled", False)
+            new_signup_state = st.toggle(
+                "🔓 Allow Public Sign-Ups", 
+                value=signup_enabled,
+                help="When OFF, users can only sign in with existing accounts. When ON, anyone can create a new account."
+            )
+            
+            if new_signup_state != signup_enabled:
+                st.session_state.data["signup_enabled"] = new_signup_state
+                log_system_event(f"SIGNUP SETTING: {'ENABLED' if new_signup_state else 'DISABLED'} by Chairman", c_name)
+                save_data()
+                st.success(f"Sign-ups {'enabled' if new_signup_state else 'disabled'}!")
+                st.rerun()
+            
+            st.divider()
+            
+            # 📋 VIEW ALL USER ACCOUNTS
+            st.subheader("📋 Registered User Accounts")
+            accounts = st.session_state.data.get("accounts", [])
+            
+            if not accounts:
+                st.info("No user accounts created yet.")
+            else:
+                # Search & Filter
+                col_search, col_filter = st.columns([3, 1])
+                with col_search:
+                    search_term = st.text_input("🔍 Search users", key="user_search")
+                with col_filter:
+                    filter_role = st.selectbox("Filter by Role", ["All"] + list(USER_PASSWORDS.keys()), key="user_filter")
+                
+                # Filter accounts
+                filtered_accounts = accounts
+                if search_term:
+                    filtered_accounts = [a for a in filtered_accounts if search_term.lower() in a["name"].lower()]
+                if filter_role != "All":
+                    filtered_accounts = [a for a in filtered_accounts if a["role"] == filter_role]
+                
+                # Display accounts in cards
+                for i, acc in enumerate(filtered_accounts):
+                    with st.container(border=True):
+                        c1, c2, c3 = st.columns([3, 2, 1])
+                        
+                        with c1:
+                            st.markdown(f"**{acc['name']}**")
+                            st.caption(f"Role: {acc['role']} | Created: {acc.get('created_at', 'N/A')}")
+                        
+                        with c2:
+                            st.code(f"Password Hash: {acc['password_hash'][:16]}...", language="text")
+                        
+                        with c3:
+                            # Reset password button
+                            if st.button("🔄 Reset PW", key=f"reset_pw_{i}"):
+                                new_pw = st.text_input(f"New password for {acc['name']}", type="password", key=f"new_pw_{i}")
+                                if st.button("Confirm Reset", key=f"confirm_reset_{i}"):
+                                    if new_pw and len(new_pw) >= 6:
+                                        for a in st.session_state.data["accounts"]:
+                                            if a["name"] == acc["name"] and a["role"] == acc["role"]:
+                                                a["password_hash"] = hash_password(new_pw)
+                                                a["reset_by"] = c_name
+                                                a["reset_at"] = datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S")
+                                        log_system_event(f"PASSWORD RESET: {acc['name']} by {c_name}", c_name)
+                                        save_data()
+                                        st.success("Password reset!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Password must be 6+ characters")
+                            
+                            # Delete account button
+                            if st.button("🗑️ Delete", key=f"del_acc_{i}", type="secondary"):
+                                st.session_state.data["accounts"] = [a for a in st.session_state.data["accounts"] 
+                                                                  if not (a["name"] == acc["name"] and a["role"] == acc["role"])]
+                                log_system_event(f"ACCOUNT DELETED: {acc['name']} ({acc['role']}) by {c_name}", c_name)
+                                save_data()
+                                st.rerun()
+            
+            st.divider()
+            
+            # ➕ MANUAL ACCOUNT CREATION (CHAIRMAN)
+            st.subheader("➕ Create Account Manually")
+            with st.expander("Create account for someone else"):
+                with st.form("manual_create"):
+                    mc_name = st.text_input("User Name").strip().title()
+                    mc_role = st.selectbox("Role", list(USER_PASSWORDS.keys()), key="mc_role")
+                    mc_pw = st.text_input("Set Password", type="password", key="mc_pw")
+                    mc_confirm = st.text_input("Confirm Password", type="password", key="mc_confirm")
+                    
+                    if st.form_submit_button("Create Account"):
+                        if not mc_name or not mc_pw:
+                            st.error("Name and password required")
+                        elif mc_pw != mc_confirm:
+                            st.error("Passwords don't match")
+                        elif len(mc_pw) < 6:
+                            st.error("Password must be 6+ characters")
+                        else:
+                            # Check for duplicates
+                            exists = next((a for a in st.session_state.data.get("accounts", []) 
+                                         if a["name"].lower() == mc_name.lower() and a["role"] == mc_role), None)
+                            if exists:
+                                st.error("Account already exists")
+                            else:
+                                new_acc = {
+                                    "name": mc_name,
+                                    "role": mc_role,
+                                    "password_hash": hash_password(mc_pw),
+                                    "created_at": datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                                    "created_by": c_name
+                                }
+                                st.session_state.data.setdefault("accounts", []).append(new_acc)
+                                
+                                # Auto-add to members if needed
+                                if not any(m.get("name") == mc_name for m in st.session_state.data.get("members", [])):
+                                    st.session_state.data["members"].append({
+                                        "name": mc_name,
+                                        "project": None if mc_role in ["Teacher", "VIA Committee"] else "CLASS",
+                                        "role_type": "CLASS" if mc_role in ["Teacher", "VIA Committee"] else "PROJECT",
+                                        "is_rep": False,
+                                        "sub_role": "N/A"
+                                    })
+                                
+                                log_system_event(f"MANUAL CREATE: {mc_name} as {mc_role} by {c_name}", c_name)
+                                save_data()
+                                st.success(f"✅ Account created for {mc_name}!")
+                                st.rerun()
