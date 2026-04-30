@@ -301,45 +301,45 @@ div[data-baseweb="toggle"] label {{
 }}
 
 /* Dropdown container (the popup menu) */
-div[data-baseweb="popover"] {
+div[data-baseweb="popover"] {{
     background-color: var(--card) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
-}
+}}
 
 /* Each dropdown option */
-div[data-baseweb="menu"] {
+div[data-baseweb="menu"] {{
     background-color: var(--card) !important;
     color: var(--text) !important;
-}
+}}
 
 /* Individual items inside dropdown */
-div[role="option"] {
+div[role="option"] {{
     background-color: var(--card) !important;
     color: var(--text) !important;
-}
+}}
 
 /* Hover effect */
-div[role="option"]:hover {
+div[role="option"]:hover {{
     background-color: var(--accent) !important;
     color: white !important;
-}
+}}
 
 /* Selected item */
-div[aria-selected="true"] {
+div[aria-selected="true"] {{
     background-color: var(--accent) !important;
     color: white !important;
-}
+}}
 
 /* Fix text inside dropdown */
-div[data-baseweb="menu"] span {
+div[data-baseweb="menu"] span {{
     color: var(--text) !important;
-}
+}}
 
 /* Fix input box (selected value display) */
-div[data-baseweb="select"] * {
+div[data-baseweb="select"] * {{
     color: var(--text) !important;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
     
