@@ -22,10 +22,10 @@ def verify_password(password: str, hashed: str) -> bool:
     return hash_password(password) == hashed
 
 # ============================================================================
-# 🍞 THEME-ADAPTIVE TOAST FUNCTION
+# 🍞 THEME-ADAPTIVE TOAST FUNCTION (Dark Mode Only)
 # ============================================================================
 def show_theme_toast(message: str, icon: str = "✨", duration: int = 3000):
-    """Theme-adaptive toast that auto-dismisses using CSS variables."""
+    """Dark mode toast that auto-dismisses."""
     toast_key = f"toast_{datetime.now(SG_TZ).timestamp()}"
     st.markdown(f"""
     <div id="{toast_key}" class="custom-toast">
@@ -45,120 +45,110 @@ def show_theme_toast(message: str, icon: str = "✨", duration: int = 3000):
 # ============================================================================
 st.set_page_config(page_title="VIA Class Portal 2026", layout="wide")
 
-# --- THEME TOGGLE ---
-if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
-
-theme_toggle = st.toggle(
-    "🌙 Dark Mode" if st.session_state.theme == "dark" else "☀️ Light Mode",
-    value=(st.session_state.theme == "dark")
-)
-
-# Detect change & show theme-adaptive toast
-if theme_toggle != (st.session_state.theme == "dark"):
-    new_theme = "dark" if theme_toggle else "light"
-    show_theme_toast(
-        message=f"Switched to {'🌙 Dark' if theme_toggle else '☀️ Light'} Mode",
-        icon="🎨" if theme_toggle else "💡",
-        duration=3000
-    )
-    st.session_state.theme = new_theme
-
-# --- CUSTOM CSS ---
-theme = st.session_state.theme
-
-# Define theme colors
-if theme == "dark":
-    bg = "#0f172a"
-    card = "#1e293b"
-    text = "#e2e8f0"
-    muted = "#94a3b8"
-    sidebar = "#020617"
-    border = "#334155"
-    accent = "#38bdf8"
-    success = "#22c55e"
-    warning = "#f59e0b"
-    error = "#ef4444"
-else:
-    bg = "#f8fafc"
-    card = "#ffffff"
-    text = "#0f172a"
-    muted = "#64748b"
-    sidebar = "#f1f5f9"
-    border = "#cbd5e1"
-    accent = "#0284c7"
-    success = "#16a34a"
-    warning = "#d97706"
-    error = "#dc2626"
+# ============================================================================
+# --- DARK MODE ONLY CSS (Browser-Setting Proof) ---
+# ============================================================================
+# Hardcoded dark theme colors
+bg = "#0f172a"
+card = "#1e293b"
+text = "#e2e8f0"
+muted = "#94a3b8"
+sidebar = "#020617"
+border = "#334155"
+accent = "#38bdf8"
+success = "#22c55e"
+warning = "#f59e0b"
+error = "#ef4444"
+primary = "#0ea5e9"
 
 st.markdown(f"""
 <style>
+/* === FORCE DARK MODE GLOBAL OVERRIDES === */
 :root {{
-    --primary: #0ea5e9;
-    --accent: {accent};
-    --bg: {bg};
-    --card: {card};
-    --text: {text};
-    --muted: {muted};
-    --border: {border};
-    --success: {success};
-    --warning: {warning};
-    --error: {error};
+    --primary: {primary} !important;
+    --accent: {accent} !important;
+    --bg: {bg} !important;
+    --card: {card} !important;
+    --text: {text} !important;
+    --muted: {muted} !important;
+    --border: {border} !important;
+    --success: {success} !important;
+    --warning: {warning} !important;
+    --error: {error} !important;
+    color-scheme: dark !important;
 }}
 
-/* Global resets */
-html, body, [class*="css"], .stApp {{
+/* Force dark background on EVERY element */
+html, body, [class*="css"], .stApp, .main, .block-container, section, div, span, p, label, h1, h2, h3, h4, h5, h6, li, ul, ol, table, thead, tbody, tr, td, th {{
     background-color: var(--bg) !important;
     color: var(--text) !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    transition: background-color 0.4s ease, color 0.4s ease !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    transition: none !important;
+}}
+
+/* Override browser default text colors */
+* {{
+    color: var(--text) !important;
+    caret-color: var(--accent) !important;
 }}
 
 /* Text elements */
-p, span, div, label, h1, h2, h3, h4, h5, h6, li {{
-    color: var(--text) !important;
-}}
-
-.stCaption, small, .stMarkdown p {{
+.stCaption, small, .stMarkdown p, .stMarkdown li, .stMarkdown ul, .stMarkdown ol {{
     color: var(--muted) !important;
 }}
 
 /* Cards & containers */
-div[data-testid="stContainer"], .stCard, .cal-container {{
+div[data-testid="stContainer"], .stCard, .cal-container, div[data-testid="stVerticalBlock"], div[data-testid="stHorizontalBlock"] {{
     background: var(--card) !important;
     border: 1px solid var(--border) !important;
     border-radius: 12px !important;
     padding: 16px !important;
     color: var(--text) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
 }}
 
-/* Sidebar */
-section[data-testid="stSidebar"] {{
+/* Sidebar - forced dark */
+section[data-testid="stSidebar"], section[data-testid="stSidebar"] *, section[data-testid="stSidebar"] input, section[data-testid="stSidebar"] select, section[data-testid="stSidebar"] button {{
     background: var(--sidebar) !important;
-    border-right: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
 }}
 
-/* Inputs */
-input, textarea, select {{
+/* Inputs - forced dark */
+input, textarea, select, [data-baseweb="input"] input, [data-baseweb="textarea"] textarea {{
     color: var(--text) !important;
     background-color: var(--card) !important;
     border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
 }}
-
 input::placeholder, textarea::placeholder {{
     color: var(--muted) !important;
+    opacity: 1 !important;
 }}
 
-/* Select dropdowns */
-div[data-baseweb="select"] > div, 
-div[data-baseweb="popover"] {{
+/* Select dropdowns - BASE and POPUP */
+div[data-baseweb="select"] > div,
+div[data-baseweb="popover"],
+div[data-baseweb="menu"],
+div[role="listbox"],
+div[role="option"] {{
     background-color: var(--card) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
 }}
+div[role="option"]:hover,
+div[role="option"][aria-selected="true"] {{
+    background-color: var(--accent) !important;
+    color: white !important;
+}}
+div[data-baseweb="menu"] span,
+div[data-baseweb="select"] span,
+div[data-baseweb="popover"] span {{
+    color: var(--text) !important;
+}}
 
-/* Buttons */
-.stButton > button {{
+/* Buttons - forced styling */
+.stButton > button, button[kind="primary"], button[kind="secondary"], button[kind="tertiary"] {{
     background: var(--primary) !important;
     color: white !important;
     border: none !important;
@@ -166,23 +156,35 @@ div[data-baseweb="popover"] {{
     font-weight: 500 !important;
     transition: opacity 0.2s !important;
 }}
-.stButton > button:hover {{
+.stButton > button:hover, button[kind="primary"]:hover {{
     opacity: 0.9 !important;
+    transform: none !important;
 }}
-.stButton > button[kind="secondary"] {{
+.stButton > button[kind="secondary"], button[kind="secondary"] {{
     background: var(--card) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
 }}
+.stButton > button[kind="secondary"]:hover {{
+    background: var(--border) !important;
+}}
 
 /* Dataframes & tables */
-[data-testid="stDataFrame"], table {{
+[data-testid="stDataFrame"], table, .dataframe {{
     color: var(--text) !important;
     background: var(--card) !important;
+    border-color: var(--border) !important;
 }}
-[data-testid="stDataFrame"] thead {{
+[data-testid="stDataFrame"] thead, table thead {{
     background: var(--card) !important;
     border-bottom: 1px solid var(--border) !important;
+    color: var(--muted) !important;
+}}
+[data-testid="stDataFrame"] tbody tr, table tbody tr {{
+    border-bottom: 1px solid var(--border) !important;
+}}
+[data-testid="stDataFrame"] tbody tr:hover, table tbody tr:hover {{
+    background: rgba(56, 189, 248, 0.1) !important;
 }}
 
 /* Alerts & messages */
@@ -190,6 +192,7 @@ div[data-baseweb="popover"] {{
     background: var(--card) !important;
     border-left: 4px solid var(--accent) !important;
     color: var(--text) !important;
+    border-color: var(--border) !important;
 }}
 .stWarning {{ border-left-color: var(--warning) !important; }}
 .stError {{ border-left-color: var(--error) !important; }}
@@ -201,24 +204,23 @@ div[data-baseweb="popover"] {{
 }}
 .stProgress > div {{
     background: var(--border) !important;
+    border-radius: 8px !important;
 }}
 
 /* Expander */
-.streamlit-expanderHeader {{
+.streamlit-expanderHeader, .streamlit-expanderContent {{
     background: var(--card) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
 }}
-.streamlit-expanderContent {{
-    background: var(--card) !important;
-    color: var(--text) !important;
-    border: 1px solid var(--border) !important;
-    border-top: none !important;
+.streamlit-expanderHeader:hover {{
+    background: var(--border) !important;
 }}
 
 /* Divider */
 hr, .stDivider {{
     border-color: var(--border) !important;
+    opacity: 0.5 !important;
 }}
 
 /* Calendar specific */
@@ -232,6 +234,7 @@ hr, .stDivider {{
 .cal-btn-wrapper button {{
     border: 2px solid var(--border) !important;
     color: var(--text) !important;
+    background: var(--card) !important;
 }}
 
 /* Lists */
@@ -242,14 +245,17 @@ ul, ol {{
 li {{
     color: var(--text) !important;
     margin: 4px 0 !important;
+    list-style-type: disc !important;
 }}
 
 /* Links */
 a {{
     color: var(--accent) !important;
+    text-decoration: none !important;
 }}
 a:hover {{
     opacity: 0.8 !important;
+    text-decoration: underline !important;
 }}
 
 /* Metrics */
@@ -264,13 +270,15 @@ a:hover {{
 }}
 .stTabs [data-baseweb="tab"] {{
     color: var(--muted) !important;
+    background: transparent !important;
 }}
 .stTabs [aria-selected="true"] {{
     color: var(--accent) !important;
     border-bottom: 2px solid var(--accent) !important;
+    background: rgba(56, 189, 248, 0.1) !important;
 }}
 
-/* === CUSTOM TOAST NOTIFICATION === */
+/* === CUSTOM TOAST NOTIFICATION (Dark) === */
 .custom-toast {{
     position: fixed;
     top: 20px;
@@ -280,7 +288,7 @@ a:hover {{
     border: 2px solid var(--accent) !important;
     border-radius: 12px !important;
     padding: 12px 20px !important;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.3) !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5) !important;
     z-index: 9999 !important;
     font-weight: 500 !important;
     display: flex;
@@ -298,7 +306,7 @@ a:hover {{
     to {{ opacity: 0; transform: translateY(-10px); }}
 }}
 
-/* Toggle switch visibility in both themes */
+/* Toggle switch (for signup toggle) */
 div[data-baseweb="toggle"] > div {{
     background: var(--card) !important;
     border: 2px solid var(--border) !important;
@@ -312,45 +320,71 @@ div[data-baseweb="toggle"] label {{
     font-weight: 600 !important;
 }}
 
-/* Dropdown container (the popup menu) */
-div[data-baseweb="popover"] {{
-    background-color: var(--card) !important;
+/* Radio buttons */
+div[data-baseweb="radio"] label,
+div[data-baseweb="radio"] span {{
     color: var(--text) !important;
+}}
+div[data-baseweb="radio"] input {{
+    accent-color: var(--accent) !important;
+}}
+
+/* Checkbox */
+div[data-baseweb="checkbox"] label,
+div[data-baseweb="checkbox"] span {{
+    color: var(--text) !important;
+}}
+div[data-baseweb="checkbox"] input {{
+    accent-color: var(--accent) !important;
+}}
+
+/* Number input */
+div[data-baseweb="number-input"] input {{
+    color: var(--text) !important;
+    background: var(--card) !important;
+}}
+
+/* Date/Time pickers */
+div[data-baseweb="date-picker"],
+div[data-baseweb="time-picker"] {{
+    background: var(--card) !important;
     border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
 }}
-
-/* Each dropdown option */
-div[data-baseweb="menu"] {{
-    background-color: var(--card) !important;
+div[data-baseweb="date-picker"] input,
+div[data-baseweb="time-picker"] input {{
     color: var(--text) !important;
+    background: transparent !important;
 }}
 
-/* Individual items inside dropdown */
-div[role="option"] {{
-    background-color: var(--card) !important;
-    color: var(--text) !important;
+/* Code blocks */
+pre, code, [data-baseweb="code"] {{
+    background: var(--sidebar) !important;
+    color: var(--accent) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
 }}
 
-/* Hover effect */
-div[role="option"]:hover {{
-    background-color: var(--accent) !important;
-    color: white !important;
+/* Scrollbars */
+::-webkit-scrollbar {{
+    width: 8px !important;
+    height: 8px !important;
+}}
+::-webkit-scrollbar-track {{
+    background: var(--sidebar) !important;
+}}
+::-webkit-scrollbar-thumb {{
+    background: var(--border) !important;
+    border-radius: 4px !important;
+}}
+::-webkit-scrollbar-thumb:hover {{
+    background: var(--accent) !important;
 }}
 
-/* Selected item */
-div[aria-selected="true"] {{
-    background-color: var(--accent) !important;
-    color: white !important;
-}}
-
-/* Fix text inside dropdown */
-div[data-baseweb="menu"] span {{
-    color: var(--text) !important;
-}}
-
-/* Fix input box (selected value display) */
-div[data-baseweb="select"] * {{
-    color: var(--text) !important;
+/* Force no light mode flash */
+body {{
+    background-color: {bg} !important;
+    color: {text} !important;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -411,7 +445,7 @@ def load_data():
             "events": [],
             "rsvp": [],
             "attendance": {},
-            "signup_enabled": False  # 🔐 Default: sign-ups disabled
+            "signup_enabled": False
         }
 
     except Exception as e:
@@ -558,19 +592,15 @@ def render_event_calendar(events, selected_project):
         week_cols = st.columns(7)
         for i, day in enumerate(week):
             with week_cols[i]:
-                # ✅ FIX: Force height on EVERY cell to prevent Streamlit from collapsing empty columns
-                # This ensures the grid rows stay perfectly aligned vertically
                 st.markdown("<div style='height: 55px;'>&nbsp;</div>", unsafe_allow_html=True)
                 
                 if day != 0:
                     has_event = day in month_events
                     
                     if has_event:
-                        # Button for days with events (matches your image style)
                         if st.button(str(day), key=f"cal_btn_{day}_{current_month}", type="secondary"):
                             st.session_state.cal_day_selected = day
                     else:
-                        # Plain text for days without events
                         st.markdown(f"<p style='text-align: center; color: {text}; font-size: 14px; margin-top: 10px;'>{day}</p>", unsafe_allow_html=True)
 
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
@@ -607,6 +637,16 @@ def render_event_calendar(events, selected_project):
 # ============================================================================
 if "data" not in st.session_state:
     st.session_state.data = load_data()
+    
+    # 🔐 MIGRATE LEGACY ACCOUNTS (add password_hash if missing)
+    for acc in st.session_state.data.get("accounts", []):
+        if "password_hash" not in acc and "password" in acc:
+            acc["password_hash"] = hash_password(acc["password"])
+            del acc["password"]
+        elif "password_hash" not in acc:
+            acc["password_hash"] = None
+            acc["is_legacy"] = True
+    
     for m in st.session_state.data.get("members", []):
         m.setdefault("name", "Unknown")
         m.setdefault("project", None)
@@ -649,9 +689,9 @@ if not st.session_state.authenticated:
     st.markdown("""
     <style>
     .stApp {
-        background: linear-gradient(-45deg, #0f172a, #1e293b, #0ea5e9, #1e293b);
-        background-size: 400% 400%;
-        animation: gradientBG 12s ease infinite;
+        background: linear-gradient(-45deg, #0f172a, #1e293b, #0ea5e9, #1e293b) !important;
+        background-size: 400% 400% !important;
+        animation: gradientBG 12s ease infinite !important;
     }
     @keyframes gradientBG {
         0% {background-position: 0% 50%;}
@@ -659,9 +699,9 @@ if not st.session_state.authenticated:
         100% {background-position: 0% 50%;}
     }
     .block-container {
-        padding-top: 6vh;
-        max-width: 450px;
-        margin: auto;
+        padding-top: 6vh !important;
+        max-width: 450px !important;
+        margin: auto !important;
     }
     div[data-baseweb="input"], div[data-baseweb="select"] {
         border-radius: 12px !important;
@@ -669,24 +709,24 @@ if not st.session_state.authenticated:
     button[kind="primary"] {
         background: #0ea5e9 !important;
         border-radius: 10px !important;
-        font-weight: bold;
+        font-weight: bold !important;
     }
     button[kind="primary"]:hover {
-        transform: scale(1.02);
-        transition: 0.2s;
+        transform: scale(1.02) !important;
+        transition: 0.2s !important;
     }
     .title {
-        text-align: center;
-        color: white;
-        font-size: 34px;
-        font-weight: 800;
-        margin-bottom: 5px;
-        animation: popIn 0.8s ease;
+        text-align: center !important;
+        color: white !important;
+        font-size: 34px !important;
+        font-weight: 800 !important;
+        margin-bottom: 5px !important;
+        animation: popIn 0.8s ease !important;
     }
     .subtitle {
-        text-align: center;
-        color: #cbd5e1;
-        margin-bottom: 25px;
+        text-align: center !important;
+        color: #cbd5e1 !important;
+        margin-bottom: 25px !important;
     }
     @keyframes popIn {
         from {opacity: 0; transform: translateY(20px);}
@@ -698,10 +738,8 @@ if not st.session_state.authenticated:
     st.markdown("<div class='title'>🚀 VIA Portal 2026</div>", unsafe_allow_html=True)
     st.markdown("<div class='subtitle'>Sign in to continue</div>", unsafe_allow_html=True)
 
-    # 🔐 Sign-up toggle for Chairman
     signup_enabled = st.session_state.data.get("signup_enabled", False)
     
-    # Tab between Sign In and Sign Up
     auth_mode = st.radio("Choose Action", ["🔐 Sign In", "📝 Sign Up"] if signup_enabled else ["🔐 Sign In"], horizontal=True, label_visibility="collapsed")
     
     if auth_mode == "🔐 Sign In":
@@ -713,21 +751,18 @@ if not st.session_state.authenticated:
             login_btn = st.form_submit_button("Sign In")
 
             if login_btn:
-                # 🔐 Check Chairman secret first
                 if role_in == "VIA Committee" and pw_in == CHAIRMAN_SECRET_PW:
                     st.session_state.authenticated = True
                     st.session_state.u_name = name_in
                     st.session_state.u_role = "Chairman"
-                # 🔐 Check default role passwords
                 elif pw_in == USER_PASSWORDS.get(role_in):
                     st.session_state.authenticated = True
                     st.session_state.u_name = name_in
                     st.session_state.u_role = role_in
-                # 🔐 Check user-created accounts
                 else:
                     user_account = next((acc for acc in st.session_state.data.get("accounts", []) 
                                         if acc["name"].lower() == name_in.lower() and acc["role"] == role_in), None)
-                    if user_account and verify_password(pw_in, user_account["password_hash"]):
+                    if user_account and verify_password(pw_in, user_account.get("password_hash", "")):
                         st.session_state.authenticated = True
                         st.session_state.u_name = name_in
                         st.session_state.u_role = role_in
@@ -762,13 +797,11 @@ if not st.session_state.authenticated:
                 elif len(su_pw) < 6:
                     st.error("❌ Password must be at least 6 characters")
                 else:
-                    # Check if account already exists
                     existing = next((acc for acc in st.session_state.data.get("accounts", []) 
                                    if acc["name"].lower() == su_name.lower() and acc["role"] == su_role), None)
                     if existing:
                         st.error("❌ Account already exists for this name and role")
                     else:
-                        # Create new account with hashed password
                         new_account = {
                             "name": su_name,
                             "role": su_role,
@@ -778,7 +811,6 @@ if not st.session_state.authenticated:
                         }
                         st.session_state.data.setdefault("accounts", []).append(new_account)
                         
-                        # Auto-add to members list if not exists
                         if not any(m.get("name") == su_name for m in st.session_state.data.get("members", [])):
                             st.session_state.data["members"].append({
                                 "name": su_name,
@@ -803,37 +835,36 @@ c_name, c_role = st.session_state.u_name, st.session_state.u_role
 is_chair, is_teach = (c_role == "Chairman"), (c_role == "Teacher")
 is_rep = "Representative" in c_role or any(m.get('name') == c_name and m.get('is_rep') for m in st.session_state.data.get('members', []))
 
-# --- MODERN SIDEBAR UI ---
 st.sidebar.markdown("""
 <style>
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #020617, #0f172a);
-    border-right: 1px solid rgba(255,255,255,0.05);
+    background: linear-gradient(180deg, #020617, #0f172a) !important;
+    border-right: 1px solid rgba(255,255,255,0.05) !important;
 }
 .sidebar-title {
-    font-size: 20px;
-    font-weight: 800;
-    color: #38bdf8;
-    margin-bottom: 8px;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #38bdf8 !important;
+    margin-bottom: 8px !important;
 }
 .user-card {
-    background: rgba(255,255,255,0.03);
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(56,189,248,0.15);
-    margin-bottom: 12px;
+    background: rgba(255,255,255,0.03) !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(56,189,248,0.15) !important;
+    margin-bottom: 12px !important;
 }
 .sidebar-section {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 12px;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+    margin-top: 12px !important;
+    margin-bottom: 6px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
 }
 hr {
-    border: none;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border: none !important;
+    border-top: 1px solid rgba(255,255,255,0.08) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -958,7 +989,6 @@ with active_tab[0]:
                     st.success("RSVP updated!")
                     st.rerun()
         
-        # ✅ FIXED HISTORY SECTION - No duplicate container, proper indentation
         st.divider()
         st.subheader("📜 Event History")
         
@@ -1104,7 +1134,7 @@ with active_tab[2]:
                             st.rerun()
 
 # ============================================================================
-# --- TAB 3: PROGRESS ---
+# --- TAB 3: PROGRESS (NO 5h GOAL) ---
 # ============================================================================
 with active_tab[3]:
     st.title("📊 Class Progress Tracker")
@@ -1151,14 +1181,19 @@ with active_tab[3]:
             else:
                 for m in members_proj:
                     mins = all_c.get(f"{m.get('name')}_{proj}", 0)
-                    progress_val = max(0.0, min(1.0, mins / 300))
+                    total_h = mins // 60
+                    total_m = mins % 60
                     with st.container():
+                        # ✅ REMOVED "/ 5h goal" - shows only logged time
                         st.markdown(f"""
                         <div style="background: var(--card); padding:14px; border-radius:10px; margin-bottom:10px; border: 1px solid var(--border);">
                             <b style="color: var(--text);">{m.get('name')}</b><br>
-                            <span style="color: var(--muted);">{mins//60}h {mins%60}m / 5h goal</span>
+                            <span style="color: var(--muted);">⏱️ {total_h}h {total_m}m logged</span>
                         </div>
                         """, unsafe_allow_html=True)
+                    # Progress bar based on class average instead of fixed goal
+                    class_avg = sum(all_c.values()) / len(all_m) if all_m else 300
+                    progress_val = max(0.0, min(1.0, mins / max(class_avg, 1)))
                     st.progress(progress_val)
 
 # ============================================================================
@@ -1216,7 +1251,7 @@ if is_chair:
         st.title("⚙️ Chairman Master Control")
         at1, at2, at3, at4, at5, at6, at7 = st.tabs([
             "👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections", 
-            "⚠️ Reset", "🖥️ Terminal", "👤 User Manager"  # ✅ NEW TAB
+            "⚠️ Reset", "🖥️ Terminal", "👤 User Manager"
         ])
         
         with at1:
@@ -1366,13 +1401,12 @@ if is_chair:
                     st.divider()
 
         # ============================================================================
-        # --- NEW TAB: 👤 USER MANAGER ---
+        # --- 👤 USER MANAGER (FIXED password_hash KeyError) ---
         # ============================================================================
         with at7:
             st.title("👤 User Account Manager")
             st.info("Manage user sign-ups and accounts. Toggle sign-ups ON/OFF below.")
             
-            # 🔐 SIGN-UP TOGGLE (CHAIRMAN CONTROL)
             signup_enabled = st.session_state.data.get("signup_enabled", False)
             new_signup_state = st.toggle(
                 "🔓 Allow Public Sign-Ups", 
@@ -1389,28 +1423,24 @@ if is_chair:
             
             st.divider()
             
-            # 📋 VIEW ALL USER ACCOUNTS
             st.subheader("📋 Registered User Accounts")
             accounts = st.session_state.data.get("accounts", [])
             
             if not accounts:
                 st.info("No user accounts created yet.")
             else:
-                # Search & Filter
                 col_search, col_filter = st.columns([3, 1])
                 with col_search:
                     search_term = st.text_input("🔍 Search users", key="user_search")
                 with col_filter:
                     filter_role = st.selectbox("Filter by Role", ["All"] + list(USER_PASSWORDS.keys()), key="user_filter")
                 
-                # Filter accounts
                 filtered_accounts = accounts
                 if search_term:
                     filtered_accounts = [a for a in filtered_accounts if search_term.lower() in a["name"].lower()]
                 if filter_role != "All":
                     filtered_accounts = [a for a in filtered_accounts if a["role"] == filter_role]
                 
-                # Display accounts in cards
                 for i, acc in enumerate(filtered_accounts):
                     with st.container(border=True):
                         c1, c2, c3 = st.columns([3, 2, 1])
@@ -1420,10 +1450,14 @@ if is_chair:
                             st.caption(f"Role: {acc['role']} | Created: {acc.get('created_at', 'N/A')}")
                         
                         with c2:
-                            st.code(f"Password Hash: {acc['password_hash'][:16]}...", language="text")
+                            # ✅ FIXED: Safe access to password_hash
+                            pw_hash = acc.get("password_hash", "N/A")
+                            if pw_hash and pw_hash != "N/A" and isinstance(pw_hash, str):
+                                st.code(f"🔐 Hash: {pw_hash[:16]}...", language="text")
+                            else:
+                                st.caption("⚠️ Legacy account (no password hash)")
                         
                         with c3:
-                            # Reset password button
                             if st.button("🔄 Reset PW", key=f"reset_pw_{i}"):
                                 new_pw = st.text_input(f"New password for {acc['name']}", type="password", key=f"new_pw_{i}")
                                 if st.button("Confirm Reset", key=f"confirm_reset_{i}"):
@@ -1440,7 +1474,6 @@ if is_chair:
                                     else:
                                         st.error("Password must be 6+ characters")
                             
-                            # Delete account button
                             if st.button("🗑️ Delete", key=f"del_acc_{i}", type="secondary"):
                                 st.session_state.data["accounts"] = [a for a in st.session_state.data["accounts"] 
                                                                   if not (a["name"] == acc["name"] and a["role"] == acc["role"])]
@@ -1450,7 +1483,6 @@ if is_chair:
             
             st.divider()
             
-            # ➕ MANUAL ACCOUNT CREATION (CHAIRMAN)
             st.subheader("➕ Create Account Manually")
             with st.expander("Create account for someone else"):
                 with st.form("manual_create"):
@@ -1467,7 +1499,6 @@ if is_chair:
                         elif len(mc_pw) < 6:
                             st.error("Password must be 6+ characters")
                         else:
-                            # Check for duplicates
                             exists = next((a for a in st.session_state.data.get("accounts", []) 
                                          if a["name"].lower() == mc_name.lower() and a["role"] == mc_role), None)
                             if exists:
@@ -1482,7 +1513,6 @@ if is_chair:
                                 }
                                 st.session_state.data.setdefault("accounts", []).append(new_acc)
                                 
-                                # Auto-add to members if needed
                                 if not any(m.get("name") == mc_name for m in st.session_state.data.get("members", [])):
                                     st.session_state.data["members"].append({
                                         "name": mc_name,
