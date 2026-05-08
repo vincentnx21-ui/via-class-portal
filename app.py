@@ -20,7 +20,7 @@ CHAIRMAN_ROLES = [
 MAX_ROLES_PER_USER = 3
 
 # ============================================================================
-# 🔐 PASSWORD & TOAST UTILS
+# 🔐 PASSWORD UTILS
 # ============================================================================
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
@@ -60,9 +60,6 @@ class Permissions:
     
     def can_adjust_time(self) -> bool:
         return self.is_chairman() or self.is_representative()
-    
-    def can_manage_events(self) -> bool:
-        return self.is_chairman()
     
     def can_delete_content(self) -> bool:
         return self.is_chairman() or self.is_teacher()
@@ -116,7 +113,8 @@ def load_data():
     try:
         ref = db.reference("via_master_record")
         data = ref.get() or {}
-        if "events" in 
+        # ✅ FIXED: Added missing `data` variable
+        if "events" in data:
             for e in data["events"]:
                 if isinstance(e.get("date"), str):
                     try: e["date"] = datetime.fromisoformat(e["date"]).date()
@@ -132,7 +130,8 @@ def save_data():
     try:
         ref = db.reference("via_master_record")
         data = st.session_state.data.copy()
-        if "events" in 
+        # ✅ FIXED: Added missing `data` variable
+        if "events" in data:
             for e in data["events"]:
                 if hasattr(e.get("date"), "isoformat"): e["date"] = e["date"].isoformat()
                 if hasattr(e.get("start_time"), "strftime"): e["start_time"] = e["start_time"].strftime("%H:%M")
@@ -394,7 +393,6 @@ with active[2]:
                 log_system_event(f"Deleted log: {l['task']}", c_name)
                 save_data(); st.rerun()
             
-            # 💬 Teacher Comments
             if perms.is_teacher():
                 st.divider()
                 st.markdown("**💬 Teacher Feedback**")
