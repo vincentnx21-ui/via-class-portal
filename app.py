@@ -38,47 +38,140 @@ def show_theme_toast(message: str, icon: str = "✨", duration: int = 3000):
     """, unsafe_allow_html=True)
 
 # ============================================================================
-# --- PRE-REGISTERED STUDENT DATA ---
+# 🔐 PERMISSIONS HELPER (Boolean-Based Role Checks)
 # ============================================================================
-# Format: { "student@gmail.com": { "name": "Full Name", "roles": [ {...}, {...} ] } }
-# Each role object defines permissions for a specific project/context
-# ⚠️ POPULATE THIS WITH YOUR ACTUAL STUDENT DATA BEFORE DEPLOYMENT
+class Permissions:
+    """Centralized boolean permission checks for role-based access control"""
+    
+    def __init__(self, user_roles: list[dict]):
+        self.roles = user_roles or []
+    
+    # ─── PROJECT ACCESS ─────────────────────────────────────────────────────
+    def can_access_project(self, project: str) -> bool:
+        """Check if user has access to a specific project"""
+        return any(
+            role.get("project") == project or role.get("project") == "CLASS"
+            for role in self.roles
+        )
+    
+    def has_any_project_access(self) -> bool:
+        """Check if user has access to at least one project"""
+        return any(role.get("project") for role in self.roles)
+    
+    # ─── ROLE TYPE CHECKS ───────────────────────────────────────────────────
+    def is_chairman(self) -> bool:
+        """Boolean: Is user a VIA Committee member?"""
+        return any(r.get("role_type") == "VIA Committee" for r in self.roles)
+    
+    def is_teacher(self) -> bool:
+        """Boolean: Is user a Teacher?"""
+        return any(r.get("role_type") == "Teacher" for r in self.roles)
+    
+    def is_representative(self, project: str = None) -> bool:
+        """Boolean: Is user a representative? Optionally filter by project."""
+        if project:
+            return any(
+                r.get("is_rep", False) and r.get("project") == project
+                for r in self.roles
+            )
+        return any(r.get("is_rep", False) or "Representative" in r.get("role_type", "") 
+                  for r in self.roles)
+    
+    def is_regular_member(self) -> bool:
+        """Boolean: Is user a regular VIA member (not rep/teacher/chair)?"""
+        return any(r.get("role_type") == "VIA members" for r in self.roles)
+    
+    # ─── PERMISSION COMBINATIONS ────────────────────────────────────────────
+    def can_edit_logs(self) -> bool:
+        """Boolean: Can user create/edit activity logs?"""
+        return self.is_chairman() or self.is_teacher() or self.is_representative()
+    
+    def can_manage_attendance(self) -> bool:
+        """Boolean: Can user mark attendance?"""
+        return self.is_chairman() or self.is_teacher()
+    
+    def can_view_admin_panel(self) -> bool:
+        """Boolean: Can user access admin features?"""
+        return self.is_chairman()
+    
+    def can_assign_bonus_time(self) -> bool:
+        """Boolean: Can user award bonus minutes?"""
+        return self.is_chairman() or self.is_representative()
+    
+    def can_delete_content(self) -> bool:
+        """Boolean: Can user delete logs/comments?"""
+        return self.is_chairman() or self.is_teacher()
+    
+    def can_manage_user_roles(self) -> bool:
+        """Boolean: Can user manage other users' roles?"""
+        return self.is_chairman()
+    
+    # ─── UTILITY ────────────────────────────────────────────────────────────
+    def get_accessible_projects(self) -> list[str]:
+        """Return list of projects user can access"""
+        projects = list(set(
+            role.get("project") for role in self.roles 
+            if role.get("project") and role.get("project") != "CLASS"
+        ))
+        if any(r.get("project") == "CLASS" for r in self.roles):
+            projects.append("CLASS")
+        return projects
+    
+    def get_primary_project(self) -> str:
+        """Return user's primary project (first non-CLASS project, or CLASS)"""
+        for role in self.roles:
+            if role.get("project") and role.get("project") != "CLASS":
+                return role["project"]
+        return "CLASS"
+    
+    def get_role_display_names(self) -> list[str]:
+        """Return formatted role names for display"""
+        display = []
+        for r in self.roles:
+            proj = r.get("project", "CLASS")
+            role_name = r.get("role_type", "Member")
+            sub = r.get("sub_role", "")
+            if sub and sub != "N/A":
+                display.append(f"{role_name} • {sub} ({proj})")
+            else:
+                display.append(f"{role_name} ({proj})")
+        return display
+
+# ============================================================================
+# --- PRE-REGISTERED STUDENT DATA (CHAIRMAN-MANAGED) ---
+# ============================================================================
+# Format: { "student@gmail.com": { "name": "Full Name", "approved": False } }
+# Chairman assigns roles AFTER student signs up via Admin panel
 STUDENT_REGISTRY = {
-    # === EXAMPLE ENTRIES - REPLACE WITH YOUR REAL DATA ===
-    "alice.tan@student.edu.sg": {
-        "name": "Alice Tan",
-        "roles": [
-            {"role_type": "Skit Representative", "project": "SKIT", "is_rep": True, "sub_role": "Lead Actor"},
-            {"role_type": "VIA members", "project": "BROCHURE", "is_rep": False, "sub_role": "Writer"}
-        ]
-    },
-    "bob.lim@student.edu.sg": {
-        "name": "Bob Lim", 
-        "roles": [
-            {"role_type": "Brochure Representative", "project": "BROCHURE", "is_rep": True, "sub_role": "Designer"},
-            {"role_type": "VIA members", "project": "SKIT", "is_rep": False, "sub_role": "Cameraman"}
-        ]
-    },
-    "teacher.ng@student.edu.sg": {
-        "name": "Teacher Ng",
-        "roles": [
-            {"role_type": "Teacher", "project": "CLASS", "is_rep": False, "sub_role": "N/A"}
-        ]
-    },
-    "chairman.via@student.edu.sg": {
-        "name": "VIA Chairman",
-        "roles": [
-            {"role_type": "VIA Committee", "project": "CLASS", "is_rep": True, "sub_role": "Chairman"}
-        ]
-    },
-    # Add more students following this pattern...
-    # "student.email@domain.sg": {
-    #     "name": "Student Name",
-    #     "roles": [
-    #         {"role_type": "Role Name", "project": "SKIT/BROCHURE/CLASS", "is_rep": True/False, "sub_role": "Specific Role"}
-    #     ]
-    # }
+    # === EXAMPLE: Pre-approved students (optional) ===
+    # Chairman can still override roles in Admin panel
+    "alice.tan@student.edu.sg": {"name": "Alice Tan", "approved": True},
+    "bob.lim@student.edu.sg": {"name": "Bob Lim", "approved": True},
+    "teacher.ng@student.edu.sg": {"name": "Teacher Ng", "approved": True},
+    "chairman.via@student.edu.sg": {"name": "VIA Chairman", "approved": True},
+    # Add more students as needed...
 }
+
+# ============================================================================
+# --- ROLE CONFIGURATION ---
+# ============================================================================
+ROLE_TYPES = [
+    "VIA Committee",      # Chairman role
+    "Teacher",            # Teacher role
+    "Skit Representative", # Project rep
+    "Brochure Representative",
+    "VIA members",        # Regular member
+]
+
+PROJECT_OPTIONS = ["SKIT", "BROCHURE", "CLASS"]
+
+SUB_ROLES = {
+    "SKIT": ["Lead Actor", "Supporting Actor", "Prop Maker", "Cameraman", "Director", "Script Writer", "Editor", "N/A"],
+    "BROCHURE": ["Designer", "Writer", "Editor", "Photographer", "Layout Artist", "N/A"],
+    "CLASS": ["N/A"],
+}
+
+MAX_ROLES_PER_USER = 3  # ← Configurable limit
 
 # ============================================================================
 # --- 1. CONFIGURATION ---
@@ -484,6 +577,23 @@ pre, code {{
     font-size: 0.95rem;
 }}
 
+.role-badge {{
+    display: inline-block;
+    background: var(--bg-tertiary);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin: 2px;
+    border: 1px solid var(--border);
+}}
+
+.role-badge.representative {{
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: none;
+    font-weight: 600;
+}}
+
 @media (max-width: 768px) {{
     .main .block-container {{
         padding: 1rem !important;
@@ -704,9 +814,10 @@ if "u_role" not in st.session_state: st.session_state.u_role = ""
 if "u_email" not in st.session_state: st.session_state.u_email = ""
 if "u_roles" not in st.session_state: st.session_state.u_roles = []
 if "u_primary_role" not in st.session_state: st.session_state.u_primary_role = ""
+if "perms" not in st.session_state: st.session_state.perms = None  # ← NEW
 
 # ============================================================================
-# --- 4. AUTHENTICATION (REVISED: Gmail-Based) ---
+# --- 4. AUTHENTICATION (CHAIRMAN-MANAGED ROLES) ---
 # ============================================================================
 USER_PASSWORDS = {
     "Teacher": "teach2026", "VIA Committee": "comm2026",
@@ -739,48 +850,40 @@ if not st.session_state.authenticated:
                     st.error("❌ Please enter both Gmail and password")
                     st.stop()
                 
-                # Look up student in pre-registered registry
-                student = STUDENT_REGISTRY.get(email_in)
-                
-                if not student:
-                    st.error("❌ Gmail not found in student registry. Please contact the chairman.")
-                    st.stop()
-                
-                # Verify password: check stored hash first, then fallback to role-based default
+                # Look up student account
                 user_account = next((acc for acc in st.session_state.data.get("accounts", [])
                                    if acc.get("email", "").lower() == email_in), None)
                 
-                password_valid = False
-                if user_account and verify_password(pw_in, user_account.get("password_hash", "")):
-                    password_valid = True
-                else:
-                    # Fallback: allow default password based on primary role for initial setup
-                    primary_role_type = student["roles"][0]["role_type"] if student["roles"] else "VIA members"
-                    if pw_in == USER_PASSWORDS.get(primary_role_type):
-                        password_valid = True
+                if not user_account:
+                    st.error("❌ Account not found. Please sign up first or contact your Chairman.")
+                    st.stop()
                 
-                if not password_valid:
+                # Verify password
+                if not verify_password(pw_in, user_account.get("password_hash", "")):
                     st.error("❌ Invalid password")
                     st.stop()
                 
-                # ✅ Authentication successful - populate session state
+                # ✅ Authentication successful - load roles from account
                 st.session_state.authenticated = True
-                st.session_state.u_name = student["name"]
+                st.session_state.u_name = user_account["name"]
                 st.session_state.u_email = email_in
-                st.session_state.u_roles = student["roles"]  # Store ALL roles for this user
-                st.session_state.u_primary_role = student["roles"][0]["role_type"] if student["roles"] else "VIA members"
+                st.session_state.u_roles = user_account.get("roles", [])  # ← Load assigned roles
+                st.session_state.u_primary_role = user_account.get("roles", [{}])[0].get("role_type", "VIA members") if user_account.get("roles") else "VIA members"
                 
-                log_system_event(f"LOGIN → {student['name']} signed in with {email_in}", student["name"])
+                # Initialize permissions
+                st.session_state.perms = Permissions(st.session_state.u_roles)
+                
+                log_system_event(f"LOGIN → {user_account['name']} signed in with {email_in}", user_account["name"])
                 save_data()
 
                 with st.spinner("Entering portal..."):
                     time.sleep(1)
 
-                st.success(f"Welcome, {student['name']}!")
+                st.success(f"Welcome, {user_account['name']}!")
                 st.rerun()
 
     elif auth_mode == "📝 Sign Up" and signup_enabled:
-        st.info("🔐 Create your account using your official student Gmail. Your roles will be auto-assigned based on our records.")
+        st.info("🔐 Create your account using your official student Gmail. Your roles will be assigned by the Chairman after approval.")
         with st.form("signup", clear_on_submit=False):
             su_email = st.text_input("Student Gmail", placeholder="e.g., yourname@student.edu.sg").strip().lower()
             su_name = st.text_input("Full Name (as registered)", placeholder="Enter your full name").strip().title()
@@ -795,50 +898,31 @@ if not st.session_state.authenticated:
                     st.error("❌ Passwords do not match")
                 elif len(su_pw) < 6:
                     st.error("❌ Password must be at least 6 characters")
-                elif su_email not in STUDENT_REGISTRY:
-                    st.error("❌ This Gmail is not in our student database. Please verify with your teacher.")
+                elif su_email in STUDENT_REGISTRY and STUDENT_REGISTRY[su_email].get("approved", False):
+                    st.error("❌ This email is already pre-registered. Please sign in instead.")
                 else:
-                    # Auto-correct name if mismatch with registry
-                    registry_name = STUDENT_REGISTRY[su_email]["name"]
-                    if su_name.lower() != registry_name.lower():
-                        st.warning(f"⚠️ Name mismatch. Using registered name: {registry_name}")
-                        su_name = registry_name
-                    
                     # Prevent duplicate accounts
                     existing = next((acc for acc in st.session_state.data.get("accounts", [])
                                    if acc.get("email", "").lower() == su_email), None)
                     if existing:
                         st.error("❌ Account already exists. Please sign in instead.")
                     else:
-                        # Create account with email as primary key
+                        # Create account with EMPTY roles (Chairman assigns later)
                         new_account = {
                             "name": su_name, 
                             "email": su_email,
                             "password_hash": hash_password(su_pw),
+                            "roles": [],  # ← Empty until Chairman assigns
+                            "status": "pending_approval",  # ← New field
                             "created_at": datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S"),
                             "created_by": "SELF"
                         }
                         st.session_state.data.setdefault("accounts", []).append(new_account)
                         
-                        # Auto-populate members list based on ALL roles from registry
-                        student_info = STUDENT_REGISTRY[su_email]
-                        for role_info in student_info["roles"]:
-                            # Avoid duplicate member entries for same name+project
-                            existing_member = next((m for m in st.session_state.data.get("members", [])
-                                                  if m.get("name") == su_name and m.get("project") == role_info["project"]), None)
-                            if not existing_member:
-                                st.session_state.data["members"].append({
-                                    "name": su_name,
-                                    "project": role_info["project"],
-                                    "role_type": role_info["role_type"],
-                                    "is_rep": role_info.get("is_rep", False),
-                                    "sub_role": role_info.get("sub_role", "N/A")
-                                })
-                        
-                        log_system_event(f"SIGNUP → {su_name} created account with {su_email}", su_name)
+                        log_system_event(f"SIGNUP → {su_name} created account (pending approval)", su_name)
                         save_data()
-                        st.success(f"✅ Account created! Please sign in with {su_email}")
-                        time.sleep(2)
+                        st.success(f"✅ Account created! Please wait for Chairman to assign your roles.")
+                        time.sleep(3)
                         st.rerun()
 
     st.stop()
@@ -849,52 +933,40 @@ if not st.session_state.authenticated:
 if st.session_state.authenticated:
     c_name = st.session_state.u_name
     user_roles = st.session_state.get("u_roles", [])
+    perms = st.session_state.perms  # ← Use Permissions instance
     
-    # Extract all projects this user has access to
-    projects_available = list(set(
-        role.get("project") for role in user_roles 
-        if role.get("project") and role.get("project") != "CLASS"
-    ))
-    
-    # Add CLASS project if user has class-level access
-    if any(role.get("project") == "CLASS" for role in user_roles):
-        projects_available.append("CLASS")
+    # Check if user has been assigned any roles yet
+    if not user_roles and not perms.is_chairman():
+        st.warning(f"🔐 Your account is pending role assignment. Please contact the Chairman to activate your access.", icon="⚠️")
+        if st.button("🚪 Logout"):
+            st.session_state.authenticated = False
+            st.rerun()
+        st.stop()
     
     # Project view selector for multi-project users
+    projects_available = perms.get_accessible_projects()
+    
     if len(projects_available) > 1:
         st.sidebar.markdown("---")
         st.sidebar.markdown("<div class='sidebar-section'>🎯 Project View</div>", unsafe_allow_html=True)
         view_proj_options = [f"🎭 SKIT" if p=="SKIT" else f"📄 BROCHURE" if p=="BROCHURE" else f"📚 CLASS" for p in projects_available]
         view_proj = st.sidebar.radio("", view_proj_options, label_visibility="collapsed", index=0)
-        # Extract project name from display string
         view_proj = "SKIT" if "SKIT" in view_proj else "BROCHURE" if "BROCHURE" in view_proj else "CLASS"
     elif projects_available:
         view_proj = projects_available[0]
     else:
-        view_proj = "CLASS"  # Fallback
+        view_proj = "CLASS"
     
-    # Update permission checks to work with multiple roles
-    is_chair = any(r.get("role_type") == "VIA Committee" for r in user_roles)
-    is_teach = any(r.get("role_type") == "Teacher" for r in user_roles)
-    is_rep = any(r.get("is_rep", False) or "Representative" in r.get("role_type", "") for r in user_roles)
-    
-    # Helper: check if user has access to specific project
-    def has_project_access(project_name):
-        return any(
-            r.get("project") == project_name or r.get("project") == "CLASS" 
-            for r in user_roles
-        )
-    
-    # Update sidebar user card to show all roles
-    roles_summary = " | ".join([
-        f"{r['role_type'].replace(' Representative', '')} ({r['project']})" 
+    # Update sidebar user card to show ALL assigned roles with badges
+    role_badges_html = "".join([
+        f'<span class="role-badge{" representative" if r.get("is_rep") else ""}">{r.get("role_type").replace(" Representative", "")} • {r.get("sub_role", "")}</span>'
         for r in user_roles
-    ]) if user_roles else st.session_state.u_primary_role
+    ]) if user_roles else '<span class="role-badge">No roles assigned</span>'
     
     st.sidebar.markdown(f"""
     <div class="user-card">
         <div style="font-size:16px; font-weight:700;">👤 {c_name}</div>
-        <div style="color: var(--text-secondary); font-size:13px;">{roles_summary}</div>
+        <div style="margin: 8px 0; display: flex; flex-wrap: wrap; gap: 4px;">{role_badges_html}</div>
         <div style="color: var(--text-muted); font-size:11px; margin-top:4px;">📧 {st.session_state.get('u_email', '')}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -924,8 +996,11 @@ if st.session_state.authenticated:
     # --- 6. TABS DEFINITION ---
     # ============================================================================
     tabs_list = ["🏠 Dashboard", "✅ Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
-    if is_chair:
+    
+    # Boolean guard for admin tab using Permissions class
+    if perms.can_view_admin_panel():
         tabs_list.append("⚙️ Admin")
+    
     active_tab = st.tabs(tabs_list)
 
     # ============================================================================
@@ -1051,8 +1126,11 @@ if st.session_state.authenticated:
             if not mems:
                 st.info("👥 No members yet. Add from Admin panel.")
             for m in mems:
-                st.markdown(f"{'⭐' if m['is_rep'] else '👤'} **{m.get('name')}**")
-                st.caption(f"Focus: {m.get('sub_role')}")
+                rep_badge = "⭐" if m.get('is_rep') else "👤"
+                st.markdown(f"{rep_badge} **{m.get('name')}**")
+                sub_role = m.get('sub_role', 'N/A')
+                if sub_role and sub_role != "N/A":
+                    st.caption(f"Focus: {sub_role}")
 
     # ============================================================================
     # --- TAB 1: ATTENDANCE ---
@@ -1073,14 +1151,16 @@ if st.session_state.authenticated:
                     rec = st.session_state.data["attendance"].get(eid, {}).get(n, {"p": False, "d": "Full"})
                     col1, col2, col3 = st.columns(3)
                     col1.write(n)
-                    if is_chair or is_teach:
+                    # Boolean permission check for attendance editing
+                    if perms.can_manage_attendance():
                         p = col2.checkbox("Present", value=rec["p"], key=f"p_{n}_{eid}")
                         d = col3.selectbox("Session", ["Full", "Half"], index=0 if rec["d"]=="Full" else 1, key=f"d_{n}_{eid}")
                         st.session_state.data["attendance"].setdefault(eid, {})[n] = {"p": p, "d": d}
                     else:
                         col2.write("✅" if rec["p"] else "❌")
                         col3.write(rec["d"])
-                if (is_chair or is_teach) and st.button("Save Attendance"):
+                # Boolean guard for save button
+                if perms.can_manage_attendance() and st.button("Save Attendance"):
                     save_data()
                     st.success("Saved!")
 
@@ -1090,7 +1170,8 @@ if st.session_state.authenticated:
     with active_tab[2]:
         st.title("🕒 Activity Log")
 
-        if is_chair or is_rep:
+        # Boolean guard for log creation form
+        if perms.can_edit_logs():
             with st.expander("➕ Log New Activity", expanded=False):
                 with st.form(f"log_{view_proj}", clear_on_submit=True):
                     col1, col2 = st.columns(2)
@@ -1099,7 +1180,9 @@ if st.session_state.authenticated:
                         lt = st.text_input("Task", placeholder="What did you work on?")
                     with col2:
                         lm = st.number_input("Minutes", min_value=5, step=5, value=30)
-                        lp = st.selectbox("Project", ["SKIT", "BROCHURE"], index=0 if view_proj=="SKIT" else 1)
+                        # Only show projects user has access to
+                        lp_options = [p for p in ["SKIT", "BROCHURE"] if perms.can_access_project(p)]
+                        lp = st.selectbox("Project", lp_options if lp_options else ["CLASS"], index=0 if view_proj=="SKIT" else 1 if lp_options else 0)
 
                     if st.form_submit_button("Submit Log", use_container_width=True):
                         if lt.strip():
@@ -1129,7 +1212,8 @@ if st.session_state.authenticated:
             if is_system:
                 st.caption("🔒 System-generated report")
 
-            if is_teach and not is_system:
+            # Boolean guard for teacher-only actions
+            if perms.is_teacher() and not is_system:
                 col1, col2 = st.columns(2)
                 if col1.button("🗑️ Delete", key=f"del_{log['log_id']}"):
                     log_system_event(f"Deleted activity: {log['task']}", c_name)
@@ -1156,7 +1240,7 @@ if st.session_state.authenticated:
                 st.markdown(f"**{teacher_name}**")
                 st.write(c.get("text", ""))
 
-                if is_teach and teacher_name == c_name and comment_id:
+                if perms.is_teacher() and teacher_name == c_name and comment_id:
                     action_col1, action_col2, _ = st.columns([1, 1, 6])
                     if action_col1.button("🗑️ Delete", key=f"del_c_{comment_id}"):
                         log_system_event(f"Deleted comment: {c.get('text','')[:30]}", c_name)
@@ -1181,14 +1265,17 @@ if st.session_state.authenticated:
         all_m, all_c = st.session_state.data.get("members", []), st.session_state.data.get("contributions", {})
         st.metric("Total Class VIA Minutes", f"{sum(all_c.values())} mins")
 
-        if is_chair or is_rep:
+        # Boolean guard for bonus time assignment
+        if perms.can_assign_bonus_time():
             st.subheader("⚙️ Project Time Adjustments")
             col1, col2 = st.columns(2)
             with col1:
                 with st.expander("➕ Add Project Bonus"):
                     with st.form("bonus_f"):
-                        tp = st.selectbox("Project", ["SKIT", "BROCHURE"], key="b1")
-                        unames = [m.get('name', 'Unknown') for m in all_m if m.get('project') == tp]
+                        # Only show projects user can access
+                        tp_options = [p for p in ["SKIT", "BROCHURE"] if perms.can_access_project(p)]
+                        tp = st.selectbox("Project", tp_options if tp_options else ["CLASS"], key="b1")
+                        unames = [m.get('name', 'Unknown') for m in all_m if m.get('project') == tp or tp == "CLASS"]
                         tu = st.selectbox("Student", unames if unames else ["None"], key="b2")
                         bm = st.number_input("Minutes", 1, step=5)
                         ra = st.text_input("Reason")
@@ -1289,12 +1376,12 @@ if st.session_state.authenticated:
     # ============================================================================
     # --- TAB 5: ADMIN (Chairman Only) ---
     # ============================================================================
-    if is_chair:
+    if perms.can_view_admin_panel():
         with active_tab[5]:
             st.title("⚙️ Chairman Master Control")
-            at1, at2, at3, at4, at5, at6, at7 = st.tabs([
+            at1, at2, at3, at4, at5, at6, at7, at8 = st.tabs([
                 "👥 Roster", "📅 Events", "🔐 Accounts", "⚖️ Corrections",
-                "⚠️ Reset", "🖥️ Terminal", "👤 User Manager"
+                "⚠️ Reset", "🖥️ Terminal", "👤 User Manager", "🎭 Role Assignment"  # ← NEW TAB
             ])
 
             with at1:
@@ -1302,15 +1389,16 @@ if st.session_state.authenticated:
                 with st.form("add_member_form"):
                     cn, cp = st.columns(2)
                     n = cn.text_input("Name")
-                    p = cp.selectbox("Project", ["SKIT", "BROCHURE", "CLASS"])
+                    p = cp.selectbox("Project", PROJECT_OPTIONS)
                     cr, cs = st.columns(2)
                     r = cr.checkbox("Rep?")
-                    s = cs.selectbox("Role", ["Actors", "Prop makers", "Cameraman", "Designer", "Editor", "Writer", "N/A"])
+                    s_options = SUB_ROLES.get(p, SUB_ROLES["CLASS"])
+                    s = cs.selectbox("Role", s_options)
                     if st.form_submit_button("Add Member"):
                         if not n.strip():
                             st.error("Name cannot be empty")
                         else:
-                            role_type = "CLASS" if p == "CLASS" else "PROJECT"
+                            role_type = "CLASS" if p == "CLASS" else ("Skit Representative" if p=="SKIT" and r else "Brochure Representative" if p=="BROCHURE" and r else "VIA members")
                             st.session_state.data["members"].append({
                                 "name": n, "project": None if role_type == "CLASS" else p,
                                 "role_type": role_type, "is_rep": r, "sub_role": s
@@ -1358,7 +1446,7 @@ if st.session_state.authenticated:
                         c1.write(f"**{ev['type']}** ({ev['project']})")
                         c1.caption(f"📅 {ev['date']} | 📍 {ev.get('venue', 'N/A')} | 🕒 {ev['start_time']}")
                         if c2.button("🗑️ Delete", key=f"del_ev_{i}"):
-                            log_system_event(f"{c_role} {c_name} deleted event '{ev['type']}' on {ev['date']}", c_name)
+                            log_system_event(f"{c_name} deleted event '{ev['type']}' on {ev['date']}", c_name)
                             st.session_state.data["events"].pop(i)
                             save_data()
                             st.rerun()
@@ -1388,7 +1476,7 @@ if st.session_state.authenticated:
                 for i, a in enumerate(st.session_state.data.get("accounts", [])):
                     with st.container(border=True):
                         c1, c2 = st.columns([4, 1])
-                        c1.write(f"**{a['name']}** ({a['role']})")
+                        c1.write(f"**{a['name']}** ({a.get('role', 'N/A')})")
                         c1.caption(f"Created: {a.get('created_at', 'N/A')}")
                         if c2.button("Wipe", key=f"w_{i}"):
                             st.session_state.data["accounts"].pop(i)
@@ -1470,13 +1558,13 @@ if st.session_state.authenticated:
                     with col_search:
                         search_term = st.text_input("🔍 Search users", key="user_search")
                     with col_filter:
-                        filter_role = st.selectbox("Filter by Role", ["All"] + list(USER_PASSWORDS.keys()), key="user_filter")
+                        filter_role = st.selectbox("Filter by Role", ["All"] + ROLE_TYPES, key="user_filter")
 
                     filtered_accounts = accounts
                     if search_term:
                         filtered_accounts = [a for a in filtered_accounts if search_term.lower() in a["name"].lower()]
                     if filter_role != "All":
-                        filtered_accounts = [a for a in filtered_accounts if a["role"] == filter_role]
+                        filtered_accounts = [a for a in filtered_accounts if any(r.get("role_type") == filter_role for r in a.get("roles", []))]
 
                     for i, acc in enumerate(filtered_accounts):
                         with st.container(border=True):
@@ -1484,7 +1572,9 @@ if st.session_state.authenticated:
 
                             with c1:
                                 st.markdown(f"**{acc['name']}**")
-                                st.caption(f"Role: {acc['role']} | Created: {acc.get('created_at', 'N/A')}")
+                                # Show assigned roles as badges
+                                roles_display = " | ".join([r.get("role_type", "N/A") for r in acc.get("roles", [])]) if acc.get("roles") else "⚠️ No roles assigned"
+                                st.caption(f"Roles: {roles_display} | Status: {acc.get('status', 'active')}")
 
                             with c2:
                                 pw_hash = acc.get("password_hash", "N/A")
@@ -1499,7 +1589,7 @@ if st.session_state.authenticated:
                                     if st.button("Confirm Reset", key=f"confirm_reset_{i}"):
                                         if new_pw and len(new_pw) >= 6:
                                             for a in st.session_state.data["accounts"]:
-                                                if a["name"] == acc["name"] and a["role"] == acc["role"]:
+                                                if a["name"] == acc["name"] and a["email"] == acc["email"]:
                                                     a["password_hash"] = hash_password(new_pw)
                                                     a["reset_by"] = c_name
                                                     a["reset_at"] = datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S")
@@ -1512,8 +1602,8 @@ if st.session_state.authenticated:
 
                                 if st.button("🗑️ Delete", key=f"del_acc_{i}", type="secondary"):
                                     st.session_state.data["accounts"] = [a for a in st.session_state.data["accounts"]
-                                                                      if not (a["name"] == acc["name"] and a["role"] == acc["role"])]
-                                    log_system_event(f"ACCOUNT DELETED: {acc['name']} ({acc['role']}) by {c_name}", c_name)
+                                                                      if not (a["name"] == acc["name"] and a["email"] == acc["email"])]
+                                    log_system_event(f"ACCOUNT DELETED: {acc['name']} by {c_name}", c_name)
                                     save_data()
                                     st.rerun()
 
@@ -1523,40 +1613,185 @@ if st.session_state.authenticated:
                 with st.expander("Create account for someone else"):
                     with st.form("manual_create"):
                         mc_name = st.text_input("User Name").strip().title()
-                        mc_role = st.selectbox("Role", list(USER_PASSWORDS.keys()), key="mc_role")
+                        mc_email = st.text_input("User Email").strip().lower()
                         mc_pw = st.text_input("Set Password", type="password", key="mc_pw")
                         mc_confirm = st.text_input("Confirm Password", type="password", key="mc_confirm")
 
                         if st.form_submit_button("Create Account"):
-                            if not mc_name or not mc_pw:
-                                st.error("Name and password required")
+                            if not mc_name or not mc_pw or not mc_email:
+                                st.error("Name, email, and password required")
                             elif mc_pw != mc_confirm:
                                 st.error("Passwords don't match")
                             elif len(mc_pw) < 6:
                                 st.error("Password must be 6+ characters")
                             else:
                                 exists = next((a for a in st.session_state.data.get("accounts", [])
-                                             if a["name"].lower() == mc_name.lower() and a["role"] == mc_role), None)
+                                             if a["email"].lower() == mc_email.lower()), None)
                                 if exists:
-                                    st.error("Account already exists")
+                                    st.error("Account with this email already exists")
                                 else:
                                     new_acc = {
-                                        "name": mc_name, "role": mc_role,
+                                        "name": mc_name, "email": mc_email,
                                         "password_hash": hash_password(mc_pw),
+                                        "roles": [],  # ← Empty until Chairman assigns
+                                        "status": "active",
                                         "created_at": datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S"),
                                         "created_by": c_name
                                     }
                                     st.session_state.data.setdefault("accounts", []).append(new_acc)
-
-                                    if not any(m.get("name") == mc_name for m in st.session_state.data.get("members", [])):
-                                        st.session_state.data["members"].append({
-                                            "name": mc_name,
-                                            "project": None if mc_role in ["Teacher", "VIA Committee"] else "CLASS",
-                                            "role_type": "CLASS" if mc_role in ["Teacher", "VIA Committee"] else "PROJECT",
-                                            "is_rep": False, "sub_role": "N/A"
-                                        })
-
-                                    log_system_event(f"MANUAL CREATE: {mc_name} as {mc_role} by {c_name}", c_name)
+                                    log_system_event(f"MANUAL CREATE: {mc_name} ({mc_email}) by {c_name}", c_name)
                                     save_data()
-                                    st.success(f"✅ Account created for {mc_name}!")
+                                    st.success(f"✅ Account created for {mc_name}! Assign roles in '🎭 Role Assignment' tab.")
                                     st.rerun()
+
+            # ============================================================================
+            # --- NEW TAB 8: ROLE ASSIGNMENT (CHAIRMAN ONLY) ---
+            # ============================================================================
+            with at8:
+                st.title("🎭 Role Assignment Manager")
+                st.info(f"Assign up to {MAX_ROLES_PER_USER} roles per user. Roles determine project access and permissions.")
+                
+                # Select user to manage
+                all_users = st.session_state.data.get("accounts", [])
+                if not all_users:
+                    st.warning("No user accounts found. Create accounts first in '👤 User Manager' tab.")
+                else:
+                    user_options = [f"{u['name']} ({u['email']})" for u in all_users]
+                    selected_user_display = st.selectbox("👤 Select User to Manage Roles", user_options)
+                    selected_user = next((u for u in all_users if f"{u['name']} ({u['email']})" == selected_user_display), None)
+                    
+                    if selected_user:
+                        current_roles = selected_user.get("roles", [])
+                        
+                        # Display current roles
+                        st.subheader("📋 Current Roles")
+                        if not current_roles:
+                            st.caption("No roles assigned yet.")
+                        else:
+                            for idx, role in enumerate(current_roles):
+                                with st.container(border=True):
+                                    col1, col2 = st.columns([4, 1])
+                                    proj = role.get("project", "CLASS")
+                                    role_type = role.get("role_type", "N/A")
+                                    sub_role = role.get("sub_role", "N/A")
+                                    is_rep = role.get("is_rep", False)
+                                    
+                                    badge_class = "representative" if is_rep else ""
+                                    col1.markdown(f"""
+                                    <span class="role-badge {badge_class}">{role_type} • {sub_role} ({proj})</span>
+                                    """, unsafe_allow_html=True)
+                                    
+                                    if col2.button("🗑️ Remove", key=f"rem_role_{selected_user['email']}_{idx}"):
+                                        current_roles.pop(idx)
+                                        selected_user["roles"] = current_roles
+                                        log_system_event(f"ROLE REMOVED: {role_type} from {selected_user['name']}", c_name)
+                                        save_data()
+                                        st.rerun()
+                        
+                        st.divider()
+                        
+                        # Add new role form
+                        st.subheader("➕ Assign New Role")
+                        
+                        # Check role limit
+                        remaining_slots = MAX_ROLES_PER_USER - len(current_roles)
+                        if remaining_slots <= 0:
+                            st.warning(f"⚠️ User already has {MAX_ROLES_PER_USER} roles (maximum reached). Remove a role first to add a new one.")
+                        else:
+                            st.caption(f"Slots remaining: {remaining_slots}/{MAX_ROLES_PER_USER}")
+                            
+                            with st.form("assign_role_form"):
+                                col1, col2, col3 = st.columns(3)
+                                
+                                with col1:
+                                    new_proj = st.selectbox("Project", PROJECT_OPTIONS, key="new_proj")
+                                
+                                with col2:
+                                    # Filter role types based on project
+                                    if new_proj == "CLASS":
+                                        role_options = ["Teacher", "VIA Committee", "VIA members"]
+                                    elif new_proj == "SKIT":
+                                        role_options = ["Skit Representative", "VIA members"]
+                                    else:  # BROCHURE
+                                        role_options = ["Brochure Representative", "VIA members"]
+                                    
+                                    new_role_type = st.selectbox("Role Type", role_options, key="new_role")
+                                
+                                with col3:
+                                    is_rep = st.checkbox("Representative?", value="Representative" in new_role_type, key="new_is_rep")
+                                    sub_options = SUB_ROLES.get(new_proj, SUB_ROLES["CLASS"])
+                                    new_sub_role = st.selectbox("Sub-Role", sub_options, key="new_sub")
+                                
+                                if st.form_submit_button("✅ Assign Role"):
+                                    # Validate uniqueness (prevent duplicate role+project combos)
+                                    duplicate = any(
+                                        r.get("project") == new_proj and r.get("role_type") == new_role_type
+                                        for r in current_roles
+                                    )
+                                    if duplicate:
+                                        st.error(f"⚠️ User already has '{new_role_type}' role for {new_proj} project.")
+                                    else:
+                                        new_role = {
+                                            "role_type": new_role_type,
+                                            "project": new_proj,
+                                            "is_rep": is_rep,
+                                            "sub_role": new_sub_role,
+                                            "assigned_at": datetime.now(SG_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+                                            "assigned_by": c_name
+                                        }
+                                        current_roles.append(new_role)
+                                        selected_user["roles"] = current_roles
+                                        
+                                        # Also add to members list if not exists
+                                        existing_member = next((m for m in st.session_state.data.get("members", [])
+                                                              if m.get("name") == selected_user["name"] and m.get("project") == new_proj), None)
+                                        if not existing_member:
+                                            st.session_state.data["members"].append({
+                                                "name": selected_user["name"],
+                                                "project": new_proj if new_proj != "CLASS" else None,
+                                                "role_type": new_role_type if new_proj != "CLASS" else "CLASS",
+                                                "is_rep": is_rep,
+                                                "sub_role": new_sub_role
+                                            })
+                                        
+                                        log_system_event(f"ROLE ASSIGNED: {new_role_type} ({new_proj}) to {selected_user['name']}", c_name)
+                                        save_data()
+                                        st.success(f"✅ Role assigned to {selected_user['name']}!")
+                                        st.rerun()
+                        
+                        # Quick actions
+                        st.divider()
+                        col_q1, col_q2 = st.columns(2)
+                        
+                        with col_q1:
+                            if st.button("🔄 Reset All Roles", type="secondary"):
+                                if st.checkbox("Confirm reset all roles for this user?", key="confirm_reset_roles"):
+                                    selected_user["roles"] = []
+                                    log_system_event(f"ROLES RESET: All roles removed from {selected_user['name']}", c_name)
+                                    save_data()
+                                    st.success("Roles reset!")
+                                    st.rerun()
+                        
+                        with col_q2:
+                            if st.button("📋 Copy Role Template", type="secondary"):
+                                st.code(f"""
+# Template for {selected_user['name']}
+{{
+    "role_type": "ROLE_NAME",
+    "project": "PROJECT_NAME",
+    "is_rep": True/False,
+    "sub_role": "SPECIFIC_ROLE"
+}}
+                                """, language="json")
+
+# ============================================================================
+# --- FOOTER ---
+# ============================================================================
+st.markdown("---")
+st.markdown(f"""
+<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1rem;">
+    VIA Class Portal 2026 • Singapore Time: {datetime.now(SG_TZ).strftime('%Y-%m-%d %H:%M:%S')} • 
+    <a href="#" style="color: var(--primary); text-decoration: none;">Help</a> • 
+    <a href="#" style="color: var(--primary); text-decoration: none;">Privacy</a>
+</div>
+""", unsafe_allow_html=True)
