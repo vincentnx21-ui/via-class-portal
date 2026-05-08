@@ -113,8 +113,13 @@ def load_data():
     try:
         ref = db.reference("via_master_record")
         data = ref.get() or {}
-        # ✅ FIXED: Added missing `data` variable
-        if "events" in data:
+        # ✅ SAFE: Backfill missing keys for legacy accounts
+        if "accounts" in 
+            for acc in data["accounts"]:
+                acc.setdefault("email", "legacy@unknown.sg")
+                acc.setdefault("roles", [])
+                acc.setdefault("status", "active")
+        if "events" in 
             for e in data["events"]:
                 if isinstance(e.get("date"), str):
                     try: e["date"] = datetime.fromisoformat(e["date"]).date()
@@ -130,8 +135,7 @@ def save_data():
     try:
         ref = db.reference("via_master_record")
         data = st.session_state.data.copy()
-        # ✅ FIXED: Added missing `data` variable
-        if "events" in data:
+        if "events" in 
             for e in data["events"]:
                 if hasattr(e.get("date"), "isoformat"): e["date"] = e["date"].isoformat()
                 if hasattr(e.get("start_time"), "strftime"): e["start_time"] = e["start_time"].strftime("%H:%M")
@@ -217,7 +221,6 @@ if not st.session_state.authenticated:
                     st.error("Please enter email and password")
                     st.stop()
 
-                # ✅ Bootstrap Chairman Login
                 if email == CHAIRMAN_EMAIL and pw == CHAIRMAN_PASSWORD:
                     acc = next((a for a in st.session_state.data["accounts"] if a.get("email") == CHAIRMAN_EMAIL), None)
                     if not acc:
@@ -236,7 +239,6 @@ if not st.session_state.authenticated:
                     log_system_event("CHAIRMAN BOOTSTRAP LOGIN", acc["name"])
                     st.rerun()
 
-                # Normal Account Login
                 acc = next((a for a in st.session_state.data["accounts"] if a.get("email") == email), None)
                 if not acc:
                     st.error("Account not found. Please sign up first.")
@@ -290,7 +292,6 @@ if not perms.roles:
     if st.button("🚪 Logout"): st.session_state.authenticated = False; st.rerun()
     st.stop()
 
-# Sidebar
 badges = "".join([
     f'<span class="role-badge{" rep" if r.get("is_rep") else ""}>{r.get("role_type","").replace(" Representative","")} • {r.get("sub_role","")}</span>' 
     for r in perms.roles
@@ -464,8 +465,10 @@ if perms.can_view_admin_panel():
             accounts = st.session_state.data.get("accounts", [])
             if not accounts: st.warning("No user accounts found.")
             else:
-                sel_user = st.selectbox("Select User", [f"{a['name']} ({a['email']})" for a in accounts])
-                user = next(a for a in accounts if f"{a['name']} ({a['email']})" == sel_user)
+                # ✅ FIXED: Safe .get() access prevents KeyError on legacy data
+                account_options = [f"{a.get('name', 'Unknown')} ({a.get('email', 'No Email')})" for a in accounts]
+                sel_user = st.selectbox("Select User", account_options)
+                user = next(a for a in accounts if f"{a.get('name', 'Unknown')} ({a.get('email', 'No Email')})" == sel_user)
                 roles = user.get("roles", [])
                 
                 st.subheader("Current Roles")
@@ -474,7 +477,7 @@ if perms.can_view_admin_panel():
                     c1.markdown(f"<span class='role-badge{' rep' if r.get('is_rep') else ''}'>{r['role_type']} • {r['sub_role']} ({r['project']})</span>", unsafe_allow_html=True)
                     if c2.button("🗑️ Remove", key=f"rm_{i}"):
                         roles.pop(i); user["roles"] = roles; 
-                        log_system_event(f"ROLE REMOVED: {r['role_type']} from {user['name']}", c_name)
+                        log_system_event(f"ROLE REMOVED: {r['role_type']} from {user.get('name', 'Unknown')}", c_name)
                         save_data(); st.rerun()
                 
                 st.divider()
@@ -492,7 +495,7 @@ if perms.can_view_admin_panel():
                             else:
                                 roles.append({"role_type": r_type, "project": p, "is_rep": is_rep, "sub_role": sub, "assigned_by": c_name})
                                 user["roles"] = roles
-                                log_system_event(f"ROLE ASSIGNED: {r_type} ({p}) to {user['name']}", c_name)
+                                log_system_event(f"ROLE ASSIGNED: {r_type} ({p}) to {user.get('name', 'Unknown')}", c_name)
                                 save_data(); st.success("Role assigned"); st.rerun()
 
         with sub_tabs[1]:
