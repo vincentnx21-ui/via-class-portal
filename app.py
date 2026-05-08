@@ -28,20 +28,6 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return hash_password(password) == hashed
 
-def show_theme_toast(message: str, icon: str = "✨", duration: int = 3000):
-    toast_key = f"toast_{datetime.now(SG_TZ).timestamp()}"
-    st.markdown(f"""
-    <div id="{toast_key}" class="custom-toast">
-        <span class="toast-icon">{icon}</span><span>{message}</span>
-    </div>
-    <script>
-        setTimeout(() => {{
-            const el = document.getElementById('{toast_key}');
-            if (el) el.remove();
-        }}, {duration});
-    </script>
-    """, unsafe_allow_html=True)
-
 # ============================================================================
 # 🔐 PERMISSIONS HELPER (Boolean-Based)
 # ============================================================================
@@ -72,8 +58,11 @@ class Permissions:
     def can_view_admin_panel(self) -> bool:
         return self.is_chairman()
     
-    def can_assign_bonus_time(self) -> bool:
+    def can_adjust_time(self) -> bool:
         return self.is_chairman() or self.is_representative()
+    
+    def can_manage_events(self) -> bool:
+        return self.is_chairman()
     
     def can_delete_content(self) -> bool:
         return self.is_chairman() or self.is_teacher()
@@ -82,10 +71,7 @@ class Permissions:
         projects = list(set(r.get("project") for r in self.roles if r.get("project") and r.get("project") != "CLASS"))
         if any(r.get("project") == "CLASS" for r in self.roles):
             projects.append("CLASS")
-        return projects
-    
-    def get_role_display_names(self) -> list[str]:
-        return [f"{r.get('role_type','')} • {r.get('sub_role','')} ({r.get('project','')})" for r in self.roles]
+        return projects if projects else ["CLASS"]
 
 # ============================================================================
 # 🎛️ CONFIGURATION & CSS
@@ -108,8 +94,7 @@ div[data-testid="stContainer"], .stCard { background: var(--card) !important; bo
 input, textarea, select { background: #1e293b !important; color: #f1f5f9 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 0.75rem !important; }
 .stTabs [data-baseweb="tab"] { color: #94a3b8 !important; background: transparent !important; }
 .stTabs [aria-selected="true"] { color: white !important; background: #3b82f6 !important; }
-.custom-toast { position: fixed; top: 20px; right: 20px; background: #1e293b; color: white; border: 1px solid #334155; padding: 1rem 1.5rem; border-radius: 12px; z-index: 9999; animation: slideIn 0.3s ease; }
-@keyframes slideIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+.terminal-line { font-family: monospace; background: #111827; padding: 6px 10px; border-radius: 6px; margin: 4px 0; font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -131,7 +116,6 @@ def load_data():
     try:
         ref = db.reference("via_master_record")
         data = ref.get() or {}
-        # Deserialize dates/times
         if "events" in 
             for e in data["events"]:
                 if isinstance(e.get("date"), str):
@@ -142,7 +126,6 @@ def load_data():
                     except: pass
         return data
     except Exception as e:
-        print("Load error:", e)
         return {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}, "signup_enabled": False}
 
 def save_data():
@@ -196,7 +179,6 @@ def render_event_calendar(events, selected_project):
     if st.session_state.get("cal_day") and st.session_state.cal_day in month_events:
         st.markdown(f"<h4 style='margin:15px 0;'>📅 Events on {st.session_state.cal_day} {calendar.month_name[month]}</h4>", unsafe_allow_html=True)
         for e in month_events[st.session_state.cal_day]:
-            st.container()
             st.markdown(f"""<div style="background:#1e293b;padding:10px;border-radius:8px;border-left:4px solid #3b82f6;margin-bottom:8px;">
                 <b>{e['type']}</b><br><span style="color:#94a3b8">⏰ {e.get('start_time', 'N/A')}</span>
             </div>""", unsafe_allow_html=True)
@@ -209,9 +191,11 @@ def render_event_calendar(events, selected_project):
 # ============================================================================
 if "data" not in st.session_state:
     st.session_state.data = load_data()
-    # Ensure required keys exist
-    for key in ["members", "accounts", "logs", "contributions", "events", "rsvp", "attendance", "signup_enabled", "system_logs"]:
-        st.session_state.data.setdefault(key, [] if key != "contributions" and key != "attendance" and key != "signup_enabled" else ({} if key in ["contributions", "attendance"] else False))
+    for k in ["members", "accounts", "logs", "events", "rsvp", "system_logs"]:
+        st.session_state.data.setdefault(k, [])
+    st.session_state.data.setdefault("contributions", {})
+    st.session_state.data.setdefault("attendance", {})
+    st.session_state.data.setdefault("signup_enabled", False)
 
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "perms" not in st.session_state: st.session_state.perms = None
@@ -302,15 +286,12 @@ if not st.session_state.authenticated:
 c_name = st.session_state.u_name
 perms = st.session_state.perms
 
-# Handle unassigned roles
 if not perms.roles:
     st.warning(f"🔐 Your account `{c_name}` has no roles assigned yet. Contact the Chairman to activate access.", icon="⚠️")
-    if st.button("🚪 Logout"):
-        st.session_state.authenticated = False
-        st.rerun()
+    if st.button("🚪 Logout"): st.session_state.authenticated = False; st.rerun()
     st.stop()
 
-# Sidebar User Card
+# Sidebar
 badges = "".join([
     f'<span class="role-badge{" rep" if r.get("is_rep") else ""}>{r.get("role_type","").replace(" Representative","")} • {r.get("sub_role","")}</span>' 
     for r in perms.roles
@@ -319,16 +300,13 @@ st.sidebar.markdown(f"""<div class="user-card"><div style="font-size:1.1rem;font
 
 projects = perms.get_accessible_projects() or ["CLASS"]
 view_proj = projects[0]
-if len(projects) > 1:
-    view_proj = st.sidebar.radio("Project View", projects, index=0)
+if len(projects) > 1: view_proj = st.sidebar.radio("Project View", projects, index=0)
 
-st.sidebar.button("🔄 Refresh", use_container_width=True, on_click=st.rerun)
-st.sidebar.button("🚪 Logout", use_container_width=True, type="primary", on_click=lambda: setattr(st.session_state, 'authenticated', False))
+st.sidebar.button("🔄 Refresh", use_container_width=True, on_click=lambda: st.rerun())
+st.sidebar.button("🚪 Logout", use_container_width=True, type="primary", on_click=lambda: st.session_state.update({"authenticated": False}))
 
-# Tabs
 tabs = ["🏠 Dashboard", "✅ Attendance", "🕒 Activity Log", "📊 Progress", "📁 Directory"]
-if perms.can_view_admin_panel():
-    tabs.append("⚙️ Admin")
+if perms.can_view_admin_panel(): tabs.append("⚙️ Admin")
 active = st.tabs(tabs)
 
 # --- DASHBOARD ---
@@ -411,9 +389,35 @@ with active[2]:
     for l in reversed(logs):
         with st.container(border=True):
             st.markdown(f"**{l['user']}** • {l['task']} ({l['minutes']} mins)")
-            if perms.can_delete_content() and st.button("🗑️", key=f"del_{l['log_id']}"):
+            if perms.can_delete_content() and st.button("🗑️ Delete Log", key=f"del_{l['log_id']}"):
                 st.session_state.data["logs"] = [x for x in st.session_state.data["logs"] if x["log_id"] != l["log_id"]]
+                log_system_event(f"Deleted log: {l['task']}", c_name)
                 save_data(); st.rerun()
+            
+            # 💬 Teacher Comments
+            if perms.is_teacher():
+                st.divider()
+                st.markdown("**💬 Teacher Feedback**")
+                for idx, c in enumerate(l.get("comments", [])):
+                    col1, col2 = st.columns([4, 1])
+                    col1.write(f"**{c.get('teacher', 'Unknown')}**: {c.get('text', '')}")
+                    if c.get("teacher") == c_name and col2.button("🗑️", key=f"del_c_{idx}_{l['log_id']}"):
+                        l["comments"].pop(idx)
+                        log_system_event("Deleted teacher comment", c_name)
+                        save_data(); st.rerun()
+                with st.expander("✏️ Add/Update Comment"):
+                    new_comment = st.text_area("Feedback", value="", key=f"comm_{l['log_id']}")
+                    if st.button("Post/Update", key=f"post_{l['log_id']}"):
+                        if not new_comment.strip(): st.error("Comment cannot be empty")
+                        else:
+                            existing_idx = next((i for i, c in enumerate(l.get("comments", [])) if c.get("teacher") == c_name), -1)
+                            if existing_idx >= 0:
+                                l["comments"][existing_idx]["text"] = new_comment
+                                log_system_event("Updated teacher feedback", c_name)
+                            else:
+                                l.setdefault("comments", []).append({"teacher": c_name, "text": new_comment, "comment_id": str(time.time())})
+                                log_system_event("Added teacher feedback", c_name)
+                            save_data(); st.success("Comment saved"); st.rerun()
 
 # --- PROGRESS ---
 with active[3]:
@@ -422,93 +426,122 @@ with active[3]:
     contribs = st.session_state.data.get("contributions", {})
     total = sum(contribs.values())
     st.metric("Total Class Minutes", total)
-    if perms.can_assign_bonus_time():
-        with st.expander("➕ Add Bonus Time"):
-            with st.form("bonus"):
-                p = st.selectbox("Project", ["SKIT", "BROCHURE", "CLASS"])
-                names = [m["name"] for m in members if m.get("project") == p or p == "CLASS"]
-                u = st.selectbox("Student", names)
-                mins = st.number_input("Minutes", min_value=5, step=5)
-                reason = st.text_input("Reason")
-                if st.form_submit_button("Apply"):
-                    k = f"{u}_{p}"
-                    contribs[k] = contribs.get(k, 0) + mins
-                    st.session_state.data["logs"].append({"log_id": f"bonus_{time.time()}", "user": u, "date": str(date.today()), "minutes": mins, "task": f"BONUS: {reason}", "project": p, "comments": []})
-                    save_data(); st.success("Applied"); st.rerun()
+    
+    if perms.can_adjust_time():
+        with st.expander("⏱️ Manual Time Correction (+/-)"):
+            with st.form("time_adj"):
+                sel_user = st.selectbox("Student", [m["name"] for m in members] if members else ["No members"])
+                adj_proj = st.selectbox("Project", ["SKIT", "BROCHURE", "CLASS"])
+                adj_mins = st.number_input("Minutes (+ or -)", step=5)
+                adj_reason = st.text_input("Reason")
+                if st.form_submit_button("Apply Correction"):
+                    if sel_user == "No members": st.error("No students available")
+                    else:
+                        key = f"{sel_user}_{adj_proj}"
+                        contribs[key] = contribs.get(key, 0) + adj_mins
+                        log_system_event(f"TIME CORRECTED: {adj_mins} mins for {sel_user} ({adj_proj})", c_name)
+                        save_data(); st.success("Time adjusted"); st.rerun()
 
-# --- DIRECTORY ---
-with active[4]:
-    st.title("📁 Directory")
-    members = st.session_state.data.get("members", [])
-    contribs = st.session_state.data.get("contributions", {})
-    data = [{"Name": m["name"], "Project": m.get("project") or "CLASS", "Role": m.get("sub_role"), "Hours": f"{contribs.get(f\"{m['name']}_{m.get('project') or 'CLASS'}\", 0)//60}h"} for m in members]
+    st.divider()
+    data = []
+    for m in members:
+        proj = m.get("project") or "CLASS"
+        key = f"{m['name']}_{proj}"
+        mins = contribs.get(key, 0)
+        data.append({"Name": m["name"], "Project": proj, "Role": m.get("sub_role", "N/A"), "Hours": f"{mins//60}h"})
     df = pd.DataFrame(data)
     search = st.text_input("🔍 Search")
     if search: df = df[df["Name"].str.contains(search, case=False)]
     st.dataframe(df, use_container_width=True, hide_index=True)
+    st.download_button("📥 Download CSV", df.to_csv(index=False), f"VIA_Directory_{date.today()}.csv", "text/csv")
 
 # --- ADMIN ---
 if perms.can_view_admin_panel():
     with active[5]:
         st.title("⚙️ Admin Control")
-        sub_tabs = st.tabs(["🎭 Role Assignment", "📅 Events", "👤 Accounts", "⚠️ Reset"])
+        sub_tabs = st.tabs(["🎭 Role Assignment", "📅 Events", "🖥️ System Terminal", "⚠️ Reset"])
         
         with sub_tabs[0]:
             st.info(f"Assign up to {MAX_ROLES_PER_USER} roles per user.")
             accounts = st.session_state.data.get("accounts", [])
-            sel_user = st.selectbox("Select User", [f"{a['name']} ({a['email']})" for a in accounts])
-            user = next(a for a in accounts if f"{a['name']} ({a['email']})" == sel_user)
-            roles = user.get("roles", [])
-            
-            st.subheader("Current Roles")
-            for i, r in enumerate(roles):
-                c1, c2 = st.columns([4, 1])
-                c1.markdown(f"<span class='role-badge{' rep' if r.get('is_rep') else ''}'>{r['role_type']} • {r['sub_role']} ({r['project']})</span>", unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"rm_{i}"):
-                    roles.pop(i); user["roles"] = roles; save_data(); st.rerun()
-            
-            st.divider()
-            st.subheader("Assign Role")
-            if len(roles) >= MAX_ROLES_PER_USER:
-                st.warning("Max roles reached.")
+            if not accounts: st.warning("No user accounts found.")
             else:
-                with st.form("assign"):
-                    p = st.selectbox("Project", ["CLASS", "SKIT", "BROCHURE"])
-                    r_type = st.selectbox("Role Type", ["VIA Committee", "Teacher", "Skit Representative", "Brochure Representative", "VIA members"] if p=="CLASS" else ["VIA members", "Skit Representative", "Brochure Representative"])
-                    is_rep = st.checkbox("Representative?")
-                    sub = st.selectbox("Sub-Role", ["N/A", "Lead", "Prop Maker", "Designer", "Writer", "Cameraman"])
-                    if st.form_submit_button("✅ Assign"):
-                        if any(r.get("project")==p and r.get("role_type")==r_type for r in roles):
-                            st.error("Role already exists")
-                        else:
-                            roles.append({"role_type": r_type, "project": p, "is_rep": is_rep, "sub_role": sub, "assigned_by": c_name})
-                            user["roles"] = roles
-                            save_data(); st.success("Assigned"); st.rerun()
+                sel_user = st.selectbox("Select User", [f"{a['name']} ({a['email']})" for a in accounts])
+                user = next(a for a in accounts if f"{a['name']} ({a['email']})" == sel_user)
+                roles = user.get("roles", [])
+                
+                st.subheader("Current Roles")
+                for i, r in enumerate(roles):
+                    c1, c2 = st.columns([4, 1])
+                    c1.markdown(f"<span class='role-badge{' rep' if r.get('is_rep') else ''}'>{r['role_type']} • {r['sub_role']} ({r['project']})</span>", unsafe_allow_html=True)
+                    if c2.button("🗑️ Remove", key=f"rm_{i}"):
+                        roles.pop(i); user["roles"] = roles; 
+                        log_system_event(f"ROLE REMOVED: {r['role_type']} from {user['name']}", c_name)
+                        save_data(); st.rerun()
+                
+                st.divider()
+                st.subheader("Assign Role")
+                if len(roles) >= MAX_ROLES_PER_USER: st.warning("Max roles reached. Remove one first.")
+                else:
+                    with st.form("assign"):
+                        p = st.selectbox("Project", ["CLASS", "SKIT", "BROCHURE"])
+                        r_type = st.selectbox("Role Type", ["VIA Committee", "Teacher", "VIA members"] if p=="CLASS" else ["VIA members", "Skit Representative", "Brochure Representative"])
+                        is_rep = st.checkbox("Representative?")
+                        sub = st.selectbox("Sub-Role", ["N/A", "Lead", "Prop Maker", "Designer", "Writer", "Cameraman"])
+                        if st.form_submit_button("✅ Assign"):
+                            if any(r.get("project")==p and r.get("role_type")==r_type for r in roles):
+                                st.error("Role already exists for this project")
+                            else:
+                                roles.append({"role_type": r_type, "project": p, "is_rep": is_rep, "sub_role": sub, "assigned_by": c_name})
+                                user["roles"] = roles
+                                log_system_event(f"ROLE ASSIGNED: {r_type} ({p}) to {user['name']}", c_name)
+                                save_data(); st.success("Role assigned"); st.rerun()
 
         with sub_tabs[1]:
             st.subheader("Add Event")
             with st.form("event"):
                 p = st.selectbox("Project", ["SKIT", "BROCHURE"])
-                t = st.selectbox("Type", ["Rehearsal", "Meeting", "Work Session"])
+                t = st.selectbox("Type", ["Rehearsal", "Meeting", "Work Session", "Production"])
                 d = st.date_input("Date")
                 tm = st.time_input("Time")
                 v = st.text_input("Venue")
                 if st.form_submit_button("Add"):
                     st.session_state.data["events"].append({"project": p, "type": t, "date": d, "start_time": tm, "venue": v, "status": "Active"})
+                    log_system_event(f"EVENT CREATED: {t} ({p})", c_name)
                     save_data(); st.success("Added"); st.rerun()
             st.divider()
+            st.subheader("Manage Events")
             for i, e in enumerate(st.session_state.data.get("events", [])):
-                if st.button(f"🗑️ {e['type']} ({e['date']})", key=f"ev_{i}"):
-                    st.session_state.data["events"].pop(i); save_data(); st.rerun()
+                with st.container(border=True):
+                    c1, c2, c3 = st.columns([4, 1, 1])
+                    c1.write(f"**{e['type']}** ({e['project']}) • {e['date']} @ {e['start_time']}")
+                    if c2.button("✏️ Edit", key=f"edit_ev_{i}"):
+                        with st.form(f"edit_{i}"):
+                            n_type = st.selectbox("Type", ["Rehearsal", "Meeting", "Work Session", "Production"], index=["Rehearsal", "Meeting", "Work Session", "Production"].index(e["type"]))
+                            n_venue = st.text_input("Venue", value=e.get("venue", ""))
+                            n_stat = st.selectbox("Status", ["Active", "Cancelled"], index=0 if e.get("status")=="Active" else 1)
+                            if st.form_submit_button("Save"):
+                                e["type"] = n_type; e["venue"] = n_venue; e["status"] = n_stat
+                                log_system_event(f"EVENT EDITED: {e['type']}", c_name)
+                                save_data(); st.rerun()
+                    if c3.button("🗑️ Delete", key=f"del_ev_{i}"):
+                        st.session_state.data["events"].pop(i)
+                        log_system_event(f"EVENT DELETED: {e['type']}", c_name)
+                        save_data(); st.rerun()
 
         with sub_tabs[2]:
-            st.subheader("Manage Accounts")
-            st.toggle("Allow Signups", value=st.session_state.data.get("signup_enabled", False), key="signup_toggle", on_change=lambda: setattr(st.session_state.data, 'signup_enabled', st.session_state.signup_toggle))
-            if "signup_enabled" not in st.session_state: st.session_state.data["signup_enabled"] = st.session_state.signup_toggle
-            save_data()
+            st.title("🖥️ System Activity Terminal")
+            logs = st.session_state.data.get("system_logs", [])
+            if not logs: st.info("No system activity recorded yet.")
+            else:
+                for log in reversed(logs[-100:]):
+                    icon = "🟢" if "LOGIN" in log["action"] else "🔴" if "LOGOUT" in log["action"] else "🔵" if "ROLE" in log["action"] else "🟡"
+                    st.markdown(f"""<div class="terminal-line"><span style="color:#94a3b8">`{log['time']}`</span> {icon} <b style="color:#f1f5f9">{log['user']}</b>: {log['action']}</div>""", unsafe_allow_html=True)
 
         with sub_tabs[3]:
-            st.warning("Danger Zone")
+            st.warning("🚨 Danger Zone")
+            st.toggle("🔓 Allow Public Sign-Ups", value=st.session_state.data.get("signup_enabled", False), key="signup_toggle", on_change=lambda: setattr(st.session_state.data, 'signup_enabled', st.session_state.signup_toggle))
             if st.button("🔥 Clear All Data"):
                 st.session_state.data = {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}, "signup_enabled": False, "system_logs": []}
+                log_system_event("FULL DATABASE RESET", c_name)
                 save_data(); st.success("Cleared"); st.rerun()
