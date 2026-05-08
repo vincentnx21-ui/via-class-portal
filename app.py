@@ -743,7 +743,7 @@ if not st.session_state.authenticated:
                 student = STUDENT_REGISTRY.get(email_in)
                 
                 if not student:
-                    st.error("❌ Gmail not found in student registry. Please contact your teacher.")
+                    st.error("❌ Gmail not found in student registry. Please contact the chairman.")
                     st.stop()
                 
                 # Verify password: check stored hash first, then fallback to role-based default
