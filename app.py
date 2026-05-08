@@ -114,12 +114,12 @@ def load_data():
         ref = db.reference("via_master_record")
         data = ref.get() or {}
         # ✅ SAFE: Backfill missing keys for legacy accounts
-        if "accounts" in 
+        if "accounts" in data:
             for acc in data["accounts"]:
                 acc.setdefault("email", "legacy@unknown.sg")
                 acc.setdefault("roles", [])
                 acc.setdefault("status", "active")
-        if "events" in 
+        if "events" in data:
             for e in data["events"]:
                 if isinstance(e.get("date"), str):
                     try: e["date"] = datetime.fromisoformat(e["date"]).date()
@@ -135,7 +135,7 @@ def save_data():
     try:
         ref = db.reference("via_master_record")
         data = st.session_state.data.copy()
-        if "events" in 
+        if "events" in data:
             for e in data["events"]:
                 if hasattr(e.get("date"), "isoformat"): e["date"] = e["date"].isoformat()
                 if hasattr(e.get("start_time"), "strftime"): e["start_time"] = e["start_time"].strftime("%H:%M")
@@ -454,6 +454,21 @@ with active[3]:
     st.dataframe(df, use_container_width=True, hide_index=True)
     st.download_button("📥 Download CSV", df.to_csv(index=False), f"VIA_Directory_{date.today()}.csv", "text/csv")
 
+# --- DIRECTORY (was missing tab index) ---
+with active[4]:
+    st.title("📁 Member Directory")
+    members = [m for m in st.session_state.data.get("members", []) if m.get("project") == view_proj or m.get("role_type") == "CLASS"]
+    if members:
+        df = pd.DataFrame([{
+            "Name": m.get("name", "Unknown"),
+            "Role": m.get("sub_role", "N/A"),
+            "Project": m.get("project", "CLASS"),
+            "Representative": "✅" if m.get("is_rep") else "❌"
+        } for m in members])
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No members assigned to this project yet.")
+
 # --- ADMIN ---
 if perms.can_view_admin_panel():
     with active[5]:
@@ -465,7 +480,6 @@ if perms.can_view_admin_panel():
             accounts = st.session_state.data.get("accounts", [])
             if not accounts: st.warning("No user accounts found.")
             else:
-                # ✅ FIXED: Safe .get() access prevents KeyError on legacy data
                 account_options = [f"{a.get('name', 'Unknown')} ({a.get('email', 'No Email')})" for a in accounts]
                 sel_user = st.selectbox("Select User", account_options)
                 user = next(a for a in accounts if f"{a.get('name', 'Unknown')} ({a.get('email', 'No Email')})" == sel_user)
@@ -541,7 +555,10 @@ if perms.can_view_admin_panel():
 
         with sub_tabs[3]:
             st.warning("🚨 Danger Zone")
-            st.toggle("🔓 Allow Public Sign-Ups", value=st.session_state.data.get("signup_enabled", False), key="signup_toggle", on_change=lambda: setattr(st.session_state.data, 'signup_enabled', st.session_state.signup_toggle))
+            st.toggle("🔓 Allow Public Sign-Ups", value=st.session_state.data.get("signup_enabled", False), key="signup_toggle")
+            if st.session_state.signup_toggle != st.session_state.data.get("signup_enabled", False):
+                st.session_state.data["signup_enabled"] = st.session_state.signup_toggle
+                save_data()
             if st.button("🔥 Clear All Data"):
                 st.session_state.data = {"members": [], "accounts": [], "logs": [], "contributions": {}, "events": [], "rsvp": [], "attendance": {}, "signup_enabled": False, "system_logs": []}
                 log_system_event("FULL DATABASE RESET", c_name)
